@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# Automatically creates a fully configured Dart SDK sandbox worktree.
+# Usage: mkagenttree <core|bazel> <task-name> [base-branch-or-commit]
+set -euo pipefail
+
+if [ "$#" -lt 2 ]; then
+    echo "Usage: mkagenttree <core|bazel> <task-name> [base-ref]"
+    exit 1
+fi
+
+CATEGORY="$1"
+TASK_NAME="$2"
+BASE_REF="${3:-}"
+
+WORKSPACE_ROOT="$HOME/github/dart-sdk"
+BARE_DIR="$WORKSPACE_ROOT/.bare"
+SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
+WORKTREE_DIR="$SANDBOX_DIR/sdk"
+
+# 1. Resolve correct base ref based on category if not explicitly provided
+if [ -z "$BASE_REF" ]; then
+    if [ "$CATEGORY" == "core" ]; then
+        BASE_REF="upstream-sdk/main"
+    elif [ "$CATEGORY" == "bazel" ]; then
+        BASE_REF="origin/main"
+    else
+        echo "Error: Category must be 'core' or 'bazel'"
+        exit 1
+    fi
+fi
+
+echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME (tracking $BASE_REF)..."
+
+# 2. Create parent directory
+mkdir -p "$SANDBOX_DIR"
+
+# 3. Add Git Worktree
+git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "$BASE_REF"
+
+# 4. Generate .gclient file
+cat > "$SANDBOX_DIR/.gclient" <<EOF
+solutions = [
+  {
+    "name": "sdk",
+    "url": "https://github.com/dart-lang/sdk.git",
+    "deps_file": "DEPS",
+    "managed": False,
+    "custom_deps": {},
+    "custom_vars": {
+      # Set to True to automatically activate the Emscripten SDK for Wasm work.
+      # "download_emscripten": True,
+    },
+  },
+]
+EOF
+
+# 5. Fast Sync Dependencies using shared git cache
+echo "🔗 Syncing external dependencies..."
+export PATH="$PATH:$HOME/github/depot_tools"
+export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
+mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
+
+cd "$WORKTREE_DIR"
+gclient sync
+
+echo "✅ Sandbox ready! You can now cd into: $WORKTREE_DIR"

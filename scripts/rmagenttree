@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Deletes a Dart SDK sandbox worktree and reclaims disk space instantly.
+# Usage: rmagenttree <core|bazel> <task-name>
+set -euo pipefail
+
+if [ "$#" -ne 2 ]; then
+    echo "Usage: rmagenttree <core|bazel> <task-name>"
+    exit 1
+fi
+
+CATEGORY="$1"
+TASK_NAME="$2"
+
+WORKSPACE_ROOT="$HOME/github/dart-sdk"
+BARE_DIR="$WORKSPACE_ROOT/.bare"
+SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
+WORKTREE_DIR="$SANDBOX_DIR/sdk"
+
+if [ ! -d "$SANDBOX_DIR" ]; then
+    echo "Error: Sandbox does not exist at $SANDBOX_DIR"
+    exit 1
+fi
+
+echo "🧹 Removing worktree and purging sandbox: agent-$TASK_NAME..."
+
+# Remove worktree cleanly from Git database
+git --git-dir="$BARE_DIR" worktree remove -f "$WORKTREE_DIR" || true
+
+# Purge files
+rm -rf "$SANDBOX_DIR"
+
+echo "✅ Clean up complete. Disk space reclaimed."

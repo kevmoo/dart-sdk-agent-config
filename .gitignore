@@ -1,0 +1,11 @@
+# Ignore OS and editor files
+.DS_Store
+*~
+*.swp
+.vscode/
+
+# Never ignore our actual agent configurations
+!AGENTS.md
+!README.md
+!scripts/
+!skills/
