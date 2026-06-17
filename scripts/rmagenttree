@@ -17,8 +17,8 @@ SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
 
 if [ ! -d "$SANDBOX_DIR" ]; then
-    echo "Error: Sandbox does not exist at $SANDBOX_DIR"
-    exit 1
+    echo "⚠️ Warning: Sandbox directory does not exist at $SANDBOX_DIR"
+    echo "Attempting to clean up Git worktree metadata anyway..."
 fi
 
 echo "🧹 Removing worktree and purging sandbox: agent-$TASK_NAME..."
@@ -26,7 +26,12 @@ echo "🧹 Removing worktree and purging sandbox: agent-$TASK_NAME..."
 # Remove worktree cleanly from Git database
 git --git-dir="$BARE_DIR" worktree remove -f "$WORKTREE_DIR" || true
 
-# Purge files
-rm -rf "$SANDBOX_DIR"
+# Clean up any other prunable worktrees in the database
+git --git-dir="$BARE_DIR" worktree prune || true
 
-echo "✅ Clean up complete. Disk space reclaimed."
+# Purge files if directory exists
+if [ -d "$SANDBOX_DIR" ]; then
+    rm -rf "$SANDBOX_DIR"
+fi
+
+echo "✅ Clean up complete."
