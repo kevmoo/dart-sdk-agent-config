@@ -72,3 +72,35 @@ Our sandbox architecture introduces an exceptionally elegant dependency manageme
 2.  **`"managed": False`:** This critical setting tells `depot_tools` **not** to manage or overwrite the primary `sdk/` Git checkout. Instead, it fully respects our pristine Git Worktree as the absolute source of truth.
 3.  **Hermetic Tooling Sync:** When `gclient sync` runs, it simply reads the `DEPS` file located inside our active worktree (`sdk/DEPS`) and fetches only the required external third-party libraries, toolchains, and prebuilt binaries.
 4.  **Shared Disk Caching:** By automatically enforcing `DEPOT_TOOLS_GIT_CACHE_DIR=~/github/dart-sdk/.git_cache`, all external Git dependency clones are cached globally on disk. Every new task sandbox links to this shared cache, reducing `gclient sync` times from several minutes to just a few seconds.
+
+---
+
+## 📊 Task Tracking & Backlog Sync (`beads`)
+
+This workspace uses **beads** (`bd`) for local task tracking. Beads is a lightweight, Dolt-backed issue tracker.
+
+### 1. Where Does the Data Live?
+* **Local Database:** The issue database is stored inside the active sandbox's `.beads/embeddeddolt/sdk` directory (which is gitignored).
+* **Remote Database:** The canonical issues database is synced via a custom Git reference (`refs/dolt/data`) on the fork remote (`git+https://github.com/kevmoo/dart-sdk-bazel.git`).
+* **Passive Board View:** `docs/bazel-migration/BACKLOG.md` and `BACKLOG_HISTORY.md` are passive, human-readable markdown summaries generated from the beads database. **Never edit these files directly.**
+
+### 2. Backlog Generation & Sync Workflow
+Whenever you create, update, or close issues in the beads database, you must regenerate the board and synchronize the changes to the remote:
+
+```bash
+# 1. Regenerate the markdown board files
+tools/sdks/dart-sdk/bin/dart docs/bazel-migration/gen_board_from_beads.dart
+
+# 2. Push the Dolt database changes to the remote fork (CRITICAL)
+bd dolt push
+
+# 3. Stage and commit the generated markdown changes to Git
+git add docs/bazel-migration/BACKLOG.md docs/bazel-migration/BACKLOG_HISTORY.md
+git commit -m "chore(migration): sync BACKLOG.md after updating tasks"
+```
+
+> [!WARNING]
+> **The Desynchronization Pitfall**:
+> Because auto-push is inactive in the embedded database mode, running the generator script and committing the resulting `BACKLOG.md` changes *without* executing `bd dolt push` will cause the Git backlog and the Dolt database to fall out of sync.
+> 
+> If this happens, the next time a new sandbox is initialized or someone runs `bd bootstrap`, the stale remote database state will be pulled down. Regenerating the board at that point will clobber and downgrade the checked-in `BACKLOG.md` back to the older database state.
