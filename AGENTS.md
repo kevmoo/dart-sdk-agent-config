@@ -89,11 +89,17 @@ Dolt executes Git operations in an isolated context and **does not read the loca
 Configure the Dolt remote to use the `www.github.com` domain instead of `github.com`. The global rewrite rule (which targets `https://github.com/` exactly) will not match, bypassing the rewrite, while Git's credential helper will still successfully authenticate against `www.github.com` over HTTPS:
 ```bash
 # Run this inside the embedded Dolt database directory:
-# .bare/.beads/embeddeddolt/sdk/
+# <worktree-dir>/.beads/embeddeddolt/sdk/
 dolt remote remove origin
 dolt remote add origin git+https://www.github.com/kevmoo/dart-sdk-bazel.git
 ```
 This permanently resolves the issue for this clone without requiring any global config modifications or environment hacks.
+
+### Worktree & Sandbox Initialization (`no beads database found`)
+When `git worktree add` checks out a branch with Beads tracking (`.beads/config.yaml`), Git ignores the local database cache (`embeddeddolt/`).
+
+*   **Prohibited Action (`bd init`)**: If you spawn in a new sandbox and receive `Error: no beads database found`, **NEVER run `bd init`**. Running `bd init` creates a blank database and causes history divergence (`Error 1105: no common ancestor`).
+*   **The Fix**: Run `bd bootstrap` inside the worktree (automatically handled by `mkagenttree` on creation) to cleanly pull the authoritative database from `sync.remote`.
 
 ---
 

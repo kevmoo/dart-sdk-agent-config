@@ -63,4 +63,11 @@ mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
 cd "$WORKTREE_DIR"
 gclient sync
 
+# 6. Hydrate Beads database if .beads exists but local storage is unhydrated
+if [ -d "$WORKTREE_DIR/.beads" ] && [ ! -d "$WORKTREE_DIR/.beads/embeddeddolt" ] && [ ! -d "$WORKTREE_DIR/.beads/dolt" ]; then
+    echo "📊 Hydrating Beads issue database from remote..."
+    (cd "$WORKTREE_DIR" && bd bootstrap)
+fi
+
 echo "✅ Sandbox ready! You can now cd into: $WORKTREE_DIR"
+
