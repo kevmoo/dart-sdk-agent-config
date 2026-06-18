@@ -58,6 +58,11 @@ Whenever an agent creates, transitions, updates, or closes an issue in the `bead
 
 ## 3. Tips for Specific Workflows
 
+### Merging Upstream Core Dart into Bazel Thread
+When assigned a task to merge core Dart updates into the Bazel fork (`bazel/` thread):
+1. **Branch Selection:** You **MUST** merge `upstream-sdk/lkgr-dev` (or `dart-googlesource/lkgr-dev`), **NEVER** `upstream-sdk/main`. `lkgr-dev` represents the rolling revision that has passed continuous integration.
+2. **Execution:** Inside your sandbox worktree (`sdk/`), run `git merge upstream-sdk/lkgr-dev`.
+
 ### Wasm / dart2wasm Development
 If your task involves WebAssembly or `dart2wasm`:
 1.  **Enable Emscripten in `.gclient`:** Set `"download_emscripten": True` in `custom_vars` in your `.gclient` file *before* running `gclient sync`. (If using `mkagenttree`, edit the generated `.gclient` file and run `gclient sync` again).
