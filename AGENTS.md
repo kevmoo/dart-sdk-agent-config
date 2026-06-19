@@ -142,3 +142,10 @@ Agents must ensure all paths in `srcs`, `hdrs`, and `#include` statements match 
 
 ### Rule 3.12: Default Private Visibility
 Set `default_visibility = ["//visibility:private"]` in all packages, and explicitly open up visibility only when necessary using granular `package_group`s.
+
+### Rule 3.13: Mandatory `copy_file` over Shell `cp` Genrules
+Never use non-hermetic host shell commands (`cp`, `mv`) inside `genrule` definitions for file staging. Always import and use `copy_file` from `@bazel_skylib//rules:copy_file.bzl`. (Complex multi-line assembly generation scripts are exempt when explicitly tagged with `# exempt-genrule: ok`).
+
+### Rule 3.14: Universal Determinism and Hermetic Timestamps
+Never allow C++ builds to depend on non-deterministic host paths or build timestamps. All wrappers must inject `-Wno-builtin-macro-redefined`, `-D__DATE__=""`, and `-D__TIME__=""`. Never invoke ambient host commands (`git`, `date`) inside build action `cmd` strings.
+
