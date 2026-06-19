@@ -48,6 +48,12 @@ Once your task is complete, submitted, and approved by the user, you should recl
 ~/.agents/scripts/rmagenttree <category> <task-name>
 ```
 
+### Rule 5: Mandatory Backlog Board Synchronization
+Whenever an agent creates, transitions, updates, or closes an issue in the `beads` database (`bd`), the agent **MUST**:
+1. Execute `tools/sdks/dart-sdk/bin/dart docs/bazel-migration/gen_board_from_beads.dart`.
+2. Stage and commit the resulting `docs/bazel-migration/BACKLOG.md` and `BACKLOG_HISTORY.md` updates to `main`.
+3. Request explicit user authorization to execute `bd dolt push` alongside `git push`.
+
 ---
 
 ## 3. Tips for Specific Workflows
@@ -148,4 +154,86 @@ Never use non-hermetic host shell commands (`cp`, `mv`) inside `genrule` definit
 
 ### Rule 3.14: Universal Determinism and Hermetic Timestamps
 Never allow C++ builds to depend on non-deterministic host paths or build timestamps. All wrappers must inject `-Wno-builtin-macro-redefined`, `-D__DATE__=""`, and `-D__TIME__=""`. Never invoke ambient host commands (`git`, `date`) inside build action `cmd` strings.
+
+---
+
+## 4. Master Workspace Replication Guide
+
+If you are an AI agent (or a human maintainer) tasked with completely mirroring this highly efficient Bare-Repository + Sandbox Worktree setup on a brand new machine, execute the following multi-step workflow exactly:
+
+### Step 1: Prepare Tooling (`depot_tools`)
+```bash
+mkdir -p ~/github
+if [ ! -d "$HOME/github/depot_tools" ]; then
+  git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/github/depot_tools
+fi
+export PATH="$PATH:$HOME/github/depot_tools"
+```
+
+### Step 2: Build the Bare Repository Database
+This central bare Git repository houses all historical objects and branches across multiple remotes, avoiding the need to duplicate 500MB+ Git databases for every individual task sandbox.
+```bash
+mkdir -p ~/github/dart-sdk/.bare
+git init --bare ~/github/dart-sdk/.bare
+
+# Add primary remotes
+git --git-dir=$HOME/github/dart-sdk/.bare remote add upstream-sdk https://github.com/dart-lang/sdk.git
+git --git-dir=$HOME/github/dart-sdk/.bare remote add origin https://github.com/kevmoo/dart-sdk-bazel.git
+
+# Fetch all remote branches and objects (This may take several minutes)
+git --git-dir=$HOME/github/dart-sdk/.bare fetch --all
+```
+
+### Step 3: Clone Our Solidified Agent Configurations
+```bash
+git clone git@github.com:kevmoo/dart-sdk-agent-config.git ~/github/dart-sdk/.agents
+```
+
+### Step 4: Verify by Spinning Up Your First Sandbox
+Use our automated helper script to instantly create a pristine task sandbox, set up hermetic dependencies, and run a lightning-fast `gclient sync` using a shared Git cache:
+```bash
+~/github/dart-sdk/.agents/scripts/mkagenttree core agent-first-setup
+```
+
+---
+
+## 5. Architectural Note: How `gclient` Operates Under the Hood
+
+Our sandbox architecture introduces an exceptionally elegant dependency management mechanism to bridge `git worktree` and `gclient`:
+
+1.  **Decoupled Code vs Dependencies:** When `mkagenttree` creates a new sandbox, it places a minimal `.gclient` solution file in the sandbox parent directory (e.g., `~/github/dart-sdk/core/agent-foo/.gclient`).
+2.  **`"managed": False`:** This critical setting tells `depot_tools` **not** to manage or overwrite the primary `sdk/` Git checkout. Instead, it fully respects our pristine Git Worktree as the absolute source of truth.
+3.  **Hermetic Tooling Sync:** When `gclient sync` runs, it simply reads the `DEPS` file located inside our active worktree (`sdk/DEPS`) and fetches only the required external third-party libraries, toolchains, and prebuilt binaries.
+4.  **Shared Disk Caching:** By automatically enforcing `DEPOT_TOOLS_GIT_CACHE_DIR=~/github/dart-sdk/.git_cache`, all external Git dependency clones are cached globally on disk. Every new task sandbox links to this shared cache, reducing `gclient sync` times from several minutes to just a few seconds.
+
+---
+
+## 6. Task Tracking & Backlog Sync (`beads`)
+
+This workspace uses **beads** (`bd`) for local task tracking. Beads is a lightweight, Dolt-backed issue tracker.
+
+### 1. Where Does the Data Live?
+* **Local Database:** The issue database is stored inside the active sandbox's `.beads/embeddeddolt/sdk` directory (which is gitignored).
+* **Remote Database:** The canonical issues database is synced via a custom Git reference (`refs/dolt/data`) on the fork remote (`git+https://github.com/kevmoo/dart-sdk-bazel.git`).
+* **Passive Board View:** `docs/bazel-migration/BACKLOG.md` and `BACKLOG_HISTORY.md` are passive, human-readable markdown summaries generated from the beads database. **Never edit these files directly.**
+
+### 2. Backlog Generation & Sync Workflow
+Whenever you create, update, or close issues in the beads database, you must regenerate the board and synchronize the changes to the remote:
+
+```bash
+# 1. Regenerate the markdown board files
+tools/sdks/dart-sdk/bin/dart docs/bazel-migration/gen_board_from_beads.dart
+
+# 2. Push the Dolt database changes to the remote fork (CRITICAL)
+bd dolt push
+
+# 3. Stage and commit the generated markdown changes to Git
+git add docs/bazel-migration/BACKLOG.md docs/bazel-migration/BACKLOG_HISTORY.md
+git commit -m "chore(migration): sync BACKLOG.md after updating tasks"
+```
+
+> [!WARNING]
+> **The Desynchronization Pitfall**:
+> Because auto-push is inactive in the embedded database mode, running the generator script and committing the resulting `BACKLOG.md` changes *without* executing `bd dolt push` will cause the Git backlog and the Dolt database to fall out of sync.
+
 
