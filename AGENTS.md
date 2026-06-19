@@ -236,4 +236,19 @@ git commit -m "chore(migration): sync BACKLOG.md after updating tasks"
 > **The Desynchronization Pitfall**:
 > Because auto-push is inactive in the embedded database mode, running the generator script and committing the resulting `BACKLOG.md` changes *without* executing `bd dolt push` will cause the Git backlog and the Dolt database to fall out of sync.
 
+---
+
+### 3. Multi-User Beads Database Routing Safeguard (`--repo .`)
+In this bare proxy container workspace architecture (`~/github/dart-sdk`), all worktrees (`bazel/main/sdk`, `core/main/sdk`, etc.) share the canonical database at `~/github/dart-sdk/.bare/.beads/`.
+
+If an agent or user operates under a configured role like `beads.role = contributor`, running `bd create` without an explicit repo target will silently route the new issue into the global user planning DB (`~/.beads-planning`), separating it from the shared repository database.
+
+**Mandatory Guardrail:**
+* When authoring or mutating tasks (`bd create`, `bd update`, `bd close`) inside any checkout under `~/github/dart-sdk/*`, **ALWAYS verify `bd where` resolves to `.bare/.beads`**.
+* If creating issues from a nested worktree where contributor shunting might be active, pass explicit repository routing:
+  ```bash
+  bd create "..." --repo /usr/local/google/home/kevmoo/github/dart-sdk/.bare
+  ```
+
+
 
