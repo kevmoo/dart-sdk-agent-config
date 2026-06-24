@@ -54,6 +54,8 @@ Whenever an agent creates, transitions, updates, or closes an issue in the `bead
 2. Stage and commit the resulting `docs/bazel-migration/BACKLOG.md` and `BACKLOG_HISTORY.md` updates to `main`.
 3. Request explicit user authorization to execute `bd dolt push` alongside `git push`.
 
+*(Note: Beads issue tracking and backlog synchronization apply **EXCLUSIVELY to the Bazel thread (`bazel/`)**. Do not use Beads for Core (`core/`) SDK tasks).*
+
 ---
 
 ## 3. Tips for Specific Workflows
@@ -213,9 +215,12 @@ Our sandbox architecture introduces an exceptionally elegant dependency manageme
 
 ---
 
-## 6. Task Tracking & Backlog Sync (`beads`)
+## 6. Task Tracking & Backlog Sync (`beads` - Bazel Thread Only)
 
-This workspace uses **beads** (`bd`) for local task tracking. Beads is a lightweight, Dolt-backed issue tracker.
+The **Bazel thread (`bazel/`)** uses **beads** (`bd`) for local task tracking. Beads is a lightweight, Dolt-backed issue tracker.
+
+> [!IMPORTANT]
+> **Beads are EXCLUSIVELY for Bazel work on the `bazel/` work thread.** Do NOT use Beads for Core (`core/`) SDK development. Core SDK tasks are tracked via GitHub issues and standard Git branch workflows.
 
 ### 1. Where Does the Data Live?
 * **Local Database:** The issue database is stored inside the active sandbox's `.beads/embeddeddolt/sdk` directory (which is gitignored).
