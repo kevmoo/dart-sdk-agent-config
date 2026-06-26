@@ -78,9 +78,11 @@ flowchart TD
 ### Detailed Execution Protocol:
 
 #### 1. Initial User Clarification (`ask_question`)
-Prompt the user immediately using the `ask_question` tool with two questions:
-1. **Work Thread (`{thread}`)**: Ask which thread to operate on (`core` or `bazel`).
-2. **Session Intent**: Ask if they want to create a new `{sandbox-worktree}` NOW, or just ask questions / explore existing code.
+*(Smart Parameter Extraction: If the user's prompt explicitly specifies any of these parameters—such as the thread (`core`/`bazel`), intent to create a worktree, or a task name—**DO NOT** ask redundant questions for those parameters. Infer them directly and only prompt for parameters that remain ambiguous).*
+
+Prompt the user using the `ask_question` tool for any missing information:
+1. **Work Thread (`{thread}`)**: Ask which thread to operate on (`core` or `bazel`), if unspecified.
+2. **Session Intent**: Ask if they want to create a new `{sandbox-worktree}` NOW, or just ask questions / explore existing code, if unspecified.
 
 #### 2. Fetch Remotes & Inspect `{root-worktree}` Health
 Regardless of whether creating a worktree or just exploring, after thread selection the agent MUST check the health of the `{root-worktree}` for that thread (`{workspace-root}/{thread}/main/sdk`):
