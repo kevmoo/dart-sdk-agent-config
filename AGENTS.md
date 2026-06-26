@@ -54,7 +54,7 @@ If you are assigned a task, you must create a dedicated sandbox.
 ### Rule 3: How to initialize your Sandbox (Automated Flow)
 To set up your workspace instantly with proper caching and remote wiring, you **MUST** use our automated helper script:
 ```bash
-~/.agents/scripts/mkagenttree {thread} <task-name>
+.agents/scripts/mkagenttree {thread} <task-name>
 ```
 *(This automatically creates the directory, maps `upstream-sdk/main` for Core or `origin/main` for Bazel, sets up `.gclient`, and runs a fast `gclient sync`).*
 
@@ -69,7 +69,7 @@ If you must run it manually:
 ### Rule 4: Clean up after yourself
 Once your task is complete, submitted, and approved by the user, you should reclaim disk space immediately using our cleanup script:
 ```bash
-~/.agents/scripts/rmagenttree {thread} <task-name>
+.agents/scripts/rmagenttree {thread} <task-name>
 ```
 
 ### Rule 5: Mandatory Backlog Board Synchronization

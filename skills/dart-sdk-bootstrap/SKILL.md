@@ -69,7 +69,7 @@ flowchart TD
     I --> K
     J --> K
     
-    K -->|"Create worktree NOW"| L["Run mkagenttree script:<br/>~/.agents/scripts/mkagenttree {thread} task-name"]
+    K -->|"Create worktree NOW"| L["Run mkagenttree script:<br/>.agents/scripts/mkagenttree {thread} task-name"]
     K -->|"Just look around"| M["Proceed with reading code or answering questions in {root-worktree}"]
     
     L --> N["{sandbox-worktree} Ready:<br/>cd into {workspace-root}/{thread}/agent-task-name/sdk"]
@@ -102,7 +102,7 @@ Regardless of whether creating a worktree or just exploring, after thread select
 If the user selected to create a new `{sandbox-worktree}` NOW:
 Execute the workspace helper script:
 ```bash
-~/.agents/scripts/mkagenttree <core|bazel> <task-name> [base-ref]
+.agents/scripts/mkagenttree <core|bazel> <task-name> [base-ref]
 ```
 
 ##### What `mkagenttree` Performs Under the Hood:
@@ -167,7 +167,7 @@ If working on WebAssembly or `dart2wasm`:
 Once work is committed, submitted, or approved by the user, immediately reclaim disk space by removing the worktree and sandbox files:
 
 ```bash
-~/.agents/scripts/rmagenttree <core|bazel> <task-name>
+.agents/scripts/rmagenttree <core|bazel> <task-name>
 ```
 
 ---
