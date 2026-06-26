@@ -16,29 +16,22 @@ WORKSPACE_ROOT="$HOME/github/dart-sdk"
 BARE_DIR="$WORKSPACE_ROOT/.bare"
 SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
+SOURCE_MAIN_DIR="$WORKSPACE_ROOT/$CATEGORY/main"
 
-# 1. Resolve correct base ref based on category if not explicitly provided
-if [ -z "$BASE_REF" ]; then
-    if [ "$CATEGORY" == "core" ]; then
-        BASE_REF="upstream-sdk/main"
-    elif [ "$CATEGORY" == "bazel" ]; then
-        BASE_REF="origin/main"
-    else
-        echo "Error: Category must be 'core' or 'bazel'"
-        exit 1
-    fi
-fi
+export PATH="$PATH:$HOME/github/depot_tools"
+export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
+mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
 
-echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME (tracking $BASE_REF)..."
+echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME using gclient-new-workdir..."
 
-# 2. Create parent directory
-mkdir -p "$SANDBOX_DIR"
-
-# 3. Add Git Worktree
-git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "$BASE_REF"
-
-# 4. Generate .gclient file
-cat > "$SANDBOX_DIR/.gclient" <<EOF
+# 1. Use gclient-new-workdir.py to clone workspace layout from main
+if [ -d "$SOURCE_MAIN_DIR" ]; then
+    gclient-new-workdir.py --max-depth 1 "$SOURCE_MAIN_DIR" "$SANDBOX_DIR"
+else
+    # Fallback to manual setup if main root dir doesn't exist
+    mkdir -p "$SANDBOX_DIR"
+    git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "${BASE_REF:-upstream-sdk/main}"
+    cat > "$SANDBOX_DIR/.gclient" <<EOF
 solutions = [
   {
     "name": "sdk",
@@ -46,28 +39,26 @@ solutions = [
     "deps_file": "DEPS",
     "managed": False,
     "custom_deps": {},
-    "custom_vars": {
-      # Set to True to automatically activate the Emscripten SDK for Wasm work.
-      # "download_emscripten": True,
-    },
+    "custom_vars": {},
   },
 ]
 EOF
+fi
 
-# 5. Fast Sync Dependencies using shared git cache
+# 2. Checkout explicit base ref if requested and different from default
+if [ -n "$BASE_REF" ]; then
+    echo "🔀 Checking out requested base ref: $BASE_REF..."
+    (cd "$WORKTREE_DIR" && git checkout --detach "$BASE_REF")
+fi
+
+# 3. Fast Sync Dependencies using shared git cache
 echo "🔗 Syncing external dependencies..."
-export PATH="$PATH:$HOME/github/depot_tools"
-export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
-mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
+(cd "$WORKTREE_DIR" && gclient sync)
 
-cd "$WORKTREE_DIR"
-gclient sync
-
-# 6. Hydrate Beads database if .beads exists but local storage is unhydrated
+# 4. Hydrate Beads database if .beads exists but local storage is unhydrated
 if [ -d "$WORKTREE_DIR/.beads" ] && [ ! -d "$WORKTREE_DIR/.beads/embeddeddolt" ] && [ ! -d "$WORKTREE_DIR/.beads/dolt" ]; then
     echo "📊 Hydrating Beads issue database from remote..."
     (cd "$WORKTREE_DIR" && bd bootstrap)
 fi
 
 echo "✅ Sandbox ready! You can now cd into: $WORKTREE_DIR"
-
