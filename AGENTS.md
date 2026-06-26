@@ -136,5 +136,22 @@ For the full architectural rulebook, refer to: 👉 **[docs/bazel-migration/GUID
 
 For instructions on duplicating this Bare-Repository + Sandbox Worktree environment on a new machine, or for details on how `gclient` operates under the hood with `"managed": False` and shared disk caching, refer to: 👉 **[REPLICATION.md](./REPLICATION.md)**.
 
+---
+
+## 8. Environment Setup & Skill Verification Protocol
+
+To ensure AI agent harnesses (such as Jetski, Gemini, Claude Code, etc.) correctly discover custom skills defined within repository subdirectories (such as `docs/bazel-migration/skills/` on the `bazel` thread), all agents operating in `{workspace-root}` MUST follow this verification protocol:
+
+1. **Check Workspace Skills Manifest**: Verify that `{workspace-root}/.agents/skills.json` exists and registers the repository skills directory:
+   ```json
+   {
+     "entries": [
+       { "path": "bazel/main/sdk/docs/bazel-migration/skills" }
+     ]
+   }
+   ```
+2. **Harness Discovery**: Because `{workspace-root}/.agents/` is the workspace customization root, standard harnesses ingest `skills.json` by default upon starting work in `{workspace-root}`. If operating on a new or unconfigured machine where `{workspace-root}/.agents/skills.json` is missing, create it immediately.
+
+
 
 
