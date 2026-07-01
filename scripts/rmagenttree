@@ -11,7 +11,8 @@ fi
 CATEGORY="$1"
 TASK_NAME="$2"
 
-WORKSPACE_ROOT="$HOME/github/dart-sdk"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BARE_DIR="$WORKSPACE_ROOT/.bare"
 SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
