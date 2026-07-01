@@ -125,6 +125,8 @@ Execute the workspace helper script:
 
 ### 🟢 Bazel Thread (`bazel`)
 * **Scope**: Bazel migration and internal integration.
+* **Bazel Thread Skills**:
+  * **Skill Discovery**: When operating on the `bazel` thread, be aware of and ready to use all specialized Bazel skills located in `docs/bazel-migration/skills/` (such as `sdk-bazel-beads`, `dart-sdk-cleanup-bead`, `bazel-test-patrol`, and `backlog`) when requested or applicable to the current task.
 * **Task Tracking (`beads`)**:
   * **Mandatory Skill**: Refer to and follow `sdk-bazel-beads` for all task tracking workflows on the Bazel thread.
   * Local database resides in `.beads/embeddeddolt/sdk`. Canonical remote synced via `git+https://www.github.com/kevmoo/dart-sdk-bazel.git`.
@@ -168,11 +170,12 @@ If working on WebAssembly or `dart2wasm`:
 
 ## 🧹 Step 4: Sandbox Teardown (`rmagenttree`)
 
-Once work is committed, submitted, or approved by the user, immediately reclaim disk space by removing the worktree and sandbox files:
-
-```bash
-.agents/scripts/rmagenttree <core|bazel> <task-name>
-```
+* **Bazel Thread Tasks**: For post-merge PR cleanup, bead closing, backlog board updates, and worktree removal, follow the mandatory workflow in `dart-sdk-cleanup-bead` (`docs/bazel-migration/skills/dart-sdk-cleanup-bead/SKILL.md`).
+* **Direct Worktree Reclaim**:
+  Once work is committed, submitted, or approved by the user, immediately reclaim disk space by removing the worktree and sandbox files:
+  ```bash
+  .agents/scripts/rmagenttree <core|bazel> <task-name>
+  ```
 
 ---
 
