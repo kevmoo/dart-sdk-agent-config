@@ -118,9 +118,11 @@ If your task involves WebAssembly or `dart2wasm`:
 The **Bazel thread (`bazel`)** uses **beads** (`bd`) for local task tracking and Dolt database synchronization.
 
 > [!IMPORTANT]
-> **BAZEL THREAD EXCLUSIVE**: Beads issue tracking applies **EXCLUSIVELY to Bazel work on the `bazel` thread**. Do NOT use Beads for Core (`core`) SDK development (which uses standard GitHub issues).
+> **BAZEL THREAD EXCLUSIVE & MANDATORY SKILL**: Beads issue tracking applies **EXCLUSIVELY to Bazel work on the `bazel` thread**. Whenever starting, updating, or completing tasks on the `bazel` thread, all agents **MUST load and adhere to the `sdk-bazel-beads` skill**.
+>
+> **BEAD CLOSURE RULE**: Keep tasks in `IN_PROGRESS` status throughout active development, local testing, and PR review. **ONLY run `bd close` after code has landed on `main`** (immediately after a direct push to `main`, or after a PR merges into `main`).
 
-For the complete guide on setup, daily workflows, board generation (`gen_board_from_beads.dart`), multi-user `--repo` routing guardrails, and Dolt/SSH push troubleshooting, refer to: 👉 **[docs/bazel-migration/BEADS.md](../../bazel/main/sdk/docs/bazel-migration/BEADS.md)**.
+For the complete guide on setup, daily workflows, board generation (`gen_board_from_beads.dart`), multi-user `--repo` routing guardrails, and Dolt/SSH push troubleshooting, refer to the `sdk-bazel-beads` skill and 👉 **[docs/bazel-migration/BEADS.md](../../bazel/main/sdk/docs/bazel-migration/BEADS.md)**.
 
 ---
 

@@ -126,7 +126,9 @@ Execute the workspace helper script:
 ### 🟢 Bazel Thread (`bazel`)
 * **Scope**: Bazel migration and internal integration.
 * **Task Tracking (`beads`)**:
+  * **Mandatory Skill**: Refer to and follow `sdk-bazel-beads` for all task tracking workflows on the Bazel thread.
   * Local database resides in `.beads/embeddeddolt/sdk`. Canonical remote synced via `git+https://www.github.com/kevmoo/dart-sdk-bazel.git`.
+  * **Task Lifecycle**: Keep tasks in `IN_PROGRESS` state throughout active development and PR review. **ONLY close a task (`bd close`) after code has landed on `main`** (direct push or PR merge).
   * **Updating Tasks**: When updating tasks with `bd`, run board synchronization and push:
     ```bash
     # 1. Regenerate markdown backlog boards
