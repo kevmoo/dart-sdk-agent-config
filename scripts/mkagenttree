@@ -12,7 +12,8 @@ CATEGORY="$1"
 TASK_NAME="$2"
 BASE_REF="${3:-}"
 
-WORKSPACE_ROOT="$HOME/github/dart-sdk"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BARE_DIR="$WORKSPACE_ROOT/.bare"
 SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
@@ -53,7 +54,20 @@ fi
 
 # 3. Fast Sync Dependencies using shared git cache
 echo "🔗 Syncing external dependencies..."
-(cd "$WORKTREE_DIR" && gclient sync)
+if (cd "$WORKTREE_DIR" && gclient sync); then
+    echo "✅ gclient sync succeeded."
+else
+    echo "⚠️ gclient sync failed. Attempting recovery by symlinking prebuilt Dart SDK from main..."
+    mkdir -p "$WORKTREE_DIR/tools/sdks"
+    if [ -d "$SOURCE_MAIN_DIR/sdk/tools/sdks/dart-sdk" ]; then
+        rm -rf "$WORKTREE_DIR/tools/sdks/dart-sdk"
+        ln -s "$SOURCE_MAIN_DIR/sdk/tools/sdks/dart-sdk" "$WORKTREE_DIR/tools/sdks/dart-sdk"
+        echo "🔗 Symlinked Dart SDK from main checkout."
+    else
+        echo "❌ Prebuilt Dart SDK not found in main checkout ($SOURCE_MAIN_DIR/sdk/tools/sdks/dart-sdk)."
+        exit 1
+    fi
+fi
 
 # 4. Hydrate Beads database if .beads exists but local storage is unhydrated
 if [ -d "$WORKTREE_DIR/.beads" ] && [ ! -d "$WORKTREE_DIR/.beads/embeddeddolt" ] && [ ! -d "$WORKTREE_DIR/.beads/dolt" ]; then

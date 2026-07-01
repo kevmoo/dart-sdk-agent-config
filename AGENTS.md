@@ -74,7 +74,7 @@ Once your task is complete, submitted, and approved by the user, you should recl
 
 ### Rule 5: Mandatory Backlog Board Synchronization
 Whenever an agent creates, transitions, updates, or closes an issue in the `beads` database (`bd`), the agent **MUST**:
-1. Execute `tools/sdks/dart-sdk/bin/dart docs/bazel-migration/gen_board_from_beads.dart`.
+1. Execute the backlog sync helper script: `.agents/scripts/sync_backlog.sh` (which resolves the correct Dart SDK and script paths dynamically).
 2. Stage and commit the resulting `docs/bazel-migration/BACKLOG.md` and `BACKLOG_HISTORY.md` updates to `main`.
 3. Request explicit user authorization to execute `bd dolt push` alongside `git push`.
 

@@ -134,7 +134,7 @@ Execute the workspace helper script:
   * **Updating Tasks**: When updating tasks with `bd`, run board synchronization and push:
     ```bash
     # 1. Regenerate markdown backlog boards
-    tools/sdks/dart-sdk/bin/dart docs/bazel-migration/gen_board_from_beads.dart
+    .agents/scripts/sync_backlog.sh
     
     # 2. Sync Dolt database remote
     bd dolt push
