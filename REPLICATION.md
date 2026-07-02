@@ -44,6 +44,8 @@ cat > ~/.bazelrc <<EOF
 build --config=remote-cache
 build --remote_cache_async
 build --experimental_repository_cache_hardlinks
+# A local disk cache must be set for the GC size/age limits below to apply.
+build --disk_cache=~/.cache/bazel-disk-cache
 build --experimental_disk_cache_gc_max_size=50G
 build --experimental_disk_cache_gc_max_age=14d
 EOF

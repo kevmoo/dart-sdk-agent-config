@@ -14,7 +14,7 @@ To ensure consistent operational syntax across all agents and human maintainers,
 * **`{thread}`**: The specific development stream within the repository:
   * `core`: Open-source Dart SDK thread (tracks `upstream-sdk/main`).
   * `bazel`: Internal Bazel migration and integration thread (tracks `origin/main`).
-* **`{root-worktree}`**: The primary persistent main checkout for a thread, located at `{workspace-root}/{thread}/main/sdk`. Used as the baseline reference checkout.
+* **`{root-worktree}`**: The primary persistent main checkout for a thread, located at `{workspace-root}/{thread}/main/sdk`. Used as the baseline reference checkout. (The `core` root is typically a detached checkout at `upstream-sdk/main`, since worktrees are created detached at their tracked ref; the `bazel` root sits on the `main` branch tracking `origin/main`.)
 * **`{sandbox-worktree}`** *(or task worktree)*: Short-lived, isolated worktrees created for specific agent tasks at `{workspace-root}/{thread}/agent-{task-name}/sdk`.
 * **`{bare-repo}`**: The central git database at `{workspace-root}/.bare/` housing historical objects for all worktrees.
 
@@ -148,6 +148,7 @@ To ensure AI agent harnesses (such as Jetski, Gemini, Claude Code, etc.) correct
    ```json
    {
      "entries": [
+       { "path": ".agents/skills" },
        { "path": "bazel/main/sdk/docs/bazel-migration/skills" }
      ]
    }
