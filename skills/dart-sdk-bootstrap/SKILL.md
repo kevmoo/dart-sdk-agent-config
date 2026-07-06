@@ -131,17 +131,10 @@ Execute the workspace helper script:
   * **Mandatory Skill**: Refer to and follow `sdk-bazel-beads` for all task tracking workflows on the Bazel thread.
   * Local database resides in `.beads/embeddeddolt/sdk`. Canonical remote synced via `git+https://www.github.com/kevmoo/dart-sdk-bazel.git`.
   * **Task Lifecycle**: Keep tasks in `IN_PROGRESS` state throughout active development and PR review. **ONLY close a task (`bd close`) after code has landed on `main`** (direct push or PR merge).
-  * **Updating Tasks**: When updating tasks with `bd`, run board synchronization and push:
+  * **Updating Tasks**: When updating tasks with `bd`, run push:
     ```bash
-    # 1. Regenerate markdown backlog boards
-    .agents/scripts/sync_backlog.sh
-    
-    # 2. Sync Dolt database remote
+    # 1. Sync Dolt database remote
     bd dolt push
-    
-    # 3. Commit updated markdown board files
-    git add docs/bazel-migration/BACKLOG.md docs/bazel-migration/BACKLOG_HISTORY.md
-    git commit -m "chore(migration): sync BACKLOG.md after updating tasks"
     ```
   * **Multi-User Routing Safeguard**: Always ensure `bd` commands target `.bare/.beads` (use `--repo /usr/local/google/home/kevmoo/github/dart-sdk/.bare` if necessary).
 
@@ -183,5 +176,4 @@ If working on WebAssembly or `dart2wasm`:
 
 1. **Explicit Authorization Required for Pushes & Resets**:
    * NEVER run `git push`, `git push --force`, `bd dolt push`, `git commit --amend`, or `git rebase` without explicit immediate confirmation from the user.
-2. **Never Edit Generated Backlog Files**:
-   * `BACKLOG.md` and `BACKLOG_HISTORY.md` are generated programmatically. Always update via `bd` and run `gen_board_from_beads.dart`.
+

@@ -72,13 +72,6 @@ Once your task is complete, submitted, and approved by the user, you should recl
 .agents/scripts/rmagenttree {thread} <task-name>
 ```
 
-### Rule 5: Mandatory Backlog Board Synchronization
-Whenever an agent creates, transitions, updates, or closes an issue in the `beads` database (`bd`), the agent **MUST**:
-1. Execute the backlog sync helper script: `.agents/scripts/sync_backlog.sh` (which resolves the correct Dart SDK and script paths dynamically).
-2. Stage and commit the resulting `docs/bazel-migration/BACKLOG.md` and `BACKLOG_HISTORY.md` updates to `main`.
-3. Request explicit user authorization to execute `bd dolt push` alongside `git push`.
-
-*(Note: Beads issue tracking and backlog synchronization apply **EXCLUSIVELY to the Bazel thread (`bazel/`)**. Do not use Beads for Core (`core/`) SDK tasks).*
 
 ---
 
@@ -122,7 +115,7 @@ The **Bazel thread (`bazel`)** uses **beads** (`bd`) for local task tracking and
 >
 > **BEAD CLOSURE RULE**: Keep tasks in `IN_PROGRESS` status throughout active development, local testing, and PR review. **ONLY run `bd close` after code has landed on `main`** (immediately after a direct push to `main`, or after a PR merges into `main`).
 
-For the complete guide on setup, daily workflows, board generation (`gen_board_from_beads.dart`), multi-user `--repo` routing guardrails, and Dolt/SSH push troubleshooting, refer to the `sdk-bazel-beads` skill and 👉 **[docs/bazel-migration/BEADS.md](../../bazel/main/sdk/docs/bazel-migration/BEADS.md)**.
+For the complete guide on setup, daily workflows, multi-user `--repo` routing guardrails, and Dolt/SSH push troubleshooting, refer to the `sdk-bazel-beads` skill and 👉 **[docs/bazel-migration/BEADS.md](../../bazel/main/sdk/docs/bazel-migration/BEADS.md)**.
 
 ---
 
