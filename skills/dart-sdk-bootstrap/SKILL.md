@@ -108,11 +108,12 @@ Execute the workspace helper script:
 ```
 
 ##### What `mkagenttree` Performs Under the Hood:
-1. Creates target directory: `~/github/dart-sdk/{thread}/agent-<task-name>/`
-2. Attaches Git worktree to `sdk/` subdirectory (`{sandbox-worktree}`).
-3. Generates `.gclient` solution file with `"managed": False` so local worktree source code is preserved.
-4. Executes `gclient sync` using the shared disk cache (`~/github/dart-sdk/.git_cache`) for rapid dependency fetching.
-5. Hydrates the local `beads` issue database (for `bazel` thread).
+1. Pre-warms and sanitizes the root checkout (`{workspace-root}/{thread}/main/sdk`) via `gclient sync -D --force --no-history`.
+2. Creates target directory: `~/github/dart-sdk/{thread}/agent-<task-name>/`
+3. Attaches Git worktree to `sdk/` subdirectory (`{sandbox-worktree}`).
+4. Generates `.gclient` solution file with `"managed": False` so local worktree source code is preserved.
+5. Executes `gclient sync` using the shared disk cache (`~/github/dart-sdk/.git_cache`) for rapid dependency fetching.
+6. Hydrates the local `beads` issue database (for `bazel` thread).
 
 ---
 

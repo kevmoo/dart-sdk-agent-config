@@ -56,7 +56,7 @@ To set up your workspace instantly with proper caching and remote wiring, you **
 ```bash
 .agents/scripts/mkagenttree {thread} <task-name>
 ```
-*(This automatically creates the directory, maps `upstream-sdk/main` for Core or `origin/main` for Bazel, sets up `.gclient`, and runs a fast `gclient sync`).*
+*(This automatically pre-warms and sanitizes the root checkout via `gclient sync -D --force`, creates the directory, maps `upstream-sdk/main` for Core or `origin/main` for Bazel, sets up `.gclient`, and runs a fast `gclient sync`).*
 
 **Manual Underlying Equivalence (For Reference Only):**
 If you must run it manually:

@@ -55,7 +55,7 @@ gcloud auth application-default login
 ```
 
 ### Step 4: Verify by Spinning Up Your First Sandbox
-Use our automated helper script to instantly create a pristine task sandbox, set up hermetic dependencies, and run a lightning-fast `gclient sync` using a shared Git cache:
+Use our automated helper script to instantly pre-warm and sanitize the root checkout (`gclient sync -D --force`), create a pristine task sandbox, set up hermetic dependencies, and run a lightning-fast `gclient sync` using a shared Git cache:
 ```bash
 ~/github/dart-sdk/.agents/scripts/mkagenttree core agent-first-setup
 ```
@@ -70,3 +70,4 @@ Our sandbox architecture introduces an exceptionally elegant dependency manageme
 2.  **`"managed": False`:** This critical setting tells `depot_tools` **not** to manage or overwrite the primary `sdk/` Git checkout. Instead, it fully respects our pristine Git Worktree as the absolute source of truth.
 3.  **Hermetic Tooling Sync:** When `gclient sync` runs, it simply reads the `DEPS` file located inside our active worktree (`sdk/DEPS`) and fetches only the required external third-party libraries, toolchains, and prebuilt binaries.
 4.  **Shared Disk Caching:** By automatically enforcing `DEPOT_TOOLS_GIT_CACHE_DIR=~/github/dart-sdk/.git_cache`, all external Git dependency clones are cached globally on disk. Every new task sandbox links to this shared cache, reducing `gclient sync` times from several minutes to just a few seconds.
+5.  **Root Checkout Sanitization:** Before cloning a new sandbox, `mkagenttree` automatically runs `gclient sync -D --force --no-history` inside the root checkout (`core/main/sdk` or `bazel/main/sdk`). This aggressively prunes removed dependencies and self-heals submodule pointers, ensuring new sandboxes never inherit broken or stale third-party states.

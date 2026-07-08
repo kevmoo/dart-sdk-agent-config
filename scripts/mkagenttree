@@ -19,13 +19,19 @@ SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
 SOURCE_MAIN_DIR="$WORKSPACE_ROOT/$CATEGORY/main"
 
-export PATH="$PATH:$HOME/github/depot_tools"
+export PATH="$HOME/github/depot_tools:$PATH"
 export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
 mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
 
 echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME using gclient-new-workdir..."
 
-# 1. Use gclient-new-workdir.py to clone workspace layout from main
+# 1. Pre-warm and sanitize root checkout dependencies if present
+if [ -d "$SOURCE_MAIN_DIR/sdk" ]; then
+    echo "🔗 Pre-warming and sanitizing root checkout dependencies ($SOURCE_MAIN_DIR/sdk)..."
+    (cd "$SOURCE_MAIN_DIR/sdk" && gclient sync -D --force --no-history) || echo "⚠️ Root gclient sync encountered non-fatal warnings; proceeding with workdir clone..."
+fi
+
+# 2. Use gclient-new-workdir.py to clone workspace layout from main
 if [ -d "$SOURCE_MAIN_DIR" ]; then
     gclient-new-workdir.py --max-depth 1 "$SOURCE_MAIN_DIR" "$SANDBOX_DIR"
 else
