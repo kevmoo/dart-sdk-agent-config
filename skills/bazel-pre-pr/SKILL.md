@@ -37,8 +37,8 @@ If the branch checks pass, spin up a subagent of type `self` (inheriting all too
      ```bash
      git diff origin/main..HEAD
      ```
-  2. Read the active migration guidelines: `{root-worktree}/.agents/rules/bazel_migration_guidelines.md` (where `{root-worktree}` is resolved dynamically for the current thread checkout).
-  3. Surgically audit all modifications in the diff against the guidelines listed in that file.
+  2. Read the active unified migration guidelines from the repository root: `{root-worktree}/docs/bazel-migration/GUIDELINES.md` (where `{root-worktree}` is resolved dynamically for the current thread checkout).
+  3. Surgically audit all modifications in the diff against the guidelines listed in that file. Pay special attention to "Part 2: Code-Level Patterns". When citing a violation, directly reference the specific "Rule" and adapt its "Prefer" block pattern to the specific code context in your suggested fix.
   4. Conduct a general, highly skeptical engineering review of the diff: check for logical robustness, verify assumptions, look for edge cases, resource cleanup misses, or race conditions, and identify opportunities to simplify the code.
   5. Write a triage report artifact named `bazel_pre_pr_review.md` in the parent conversation's artifacts directory.
   6. The report MUST structure issues exactly like `github-pr-triage`:
