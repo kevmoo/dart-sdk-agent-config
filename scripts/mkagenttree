@@ -65,9 +65,11 @@ verify_toolchain() {
 # Check for --sync or --repair mode
 if [ "${1:-}" = "--sync" ] || [ "${1:-}" = "--repair" ] || [ "${1:-}" = "-s" ]; then
     TARGET_PATH="${2:-$PWD}"
-    if [ -d "$TARGET_PATH/sdk" ]; then
+    if [ -f "$TARGET_PATH/DEPS" ]; then
+        WORKTREE_DIR="$(cd "$TARGET_PATH" && pwd)"
+    elif [ -d "$TARGET_PATH/sdk" ] && [ -f "$TARGET_PATH/sdk/DEPS" ]; then
         WORKTREE_DIR="$(cd "$TARGET_PATH/sdk" && pwd)"
-    elif [ -f "$TARGET_PATH/DEPS" ] || [ -d "$TARGET_PATH/.git" ]; then
+    elif [ -f "$TARGET_PATH/.git" ] || [ -d "$TARGET_PATH/.git" ]; then
         WORKTREE_DIR="$(cd "$TARGET_PATH" && pwd)"
     else
         echo "❌ Error: Cannot locate Dart SDK worktree in '$TARGET_PATH'."
