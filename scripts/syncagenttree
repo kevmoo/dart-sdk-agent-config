@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Re-syncs dependencies and verifies toolchain health for a Dart SDK sandbox worktree.
+# Usage: syncagenttree [path-to-sdk-or-sandbox-worktree]
+set -euo pipefail
+
+TARGET_PATH="${1:-$PWD}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+# Resolve sdk directory
+if [ -d "$TARGET_PATH/sdk" ]; then
+    WORKTREE_DIR="$(cd "$TARGET_PATH/sdk" && pwd)"
+elif [ -f "$TARGET_PATH/DEPS" ] || [ -d "$TARGET_PATH/.git" ]; then
+    WORKTREE_DIR="$(cd "$TARGET_PATH" && pwd)"
+else
+    echo "❌ Error: Cannot locate Dart SDK worktree in '$TARGET_PATH'."
+    echo "   Usage: syncagenttree [path-to-sdk-or-sandbox-worktree]"
+    exit 1
+fi
+
+echo "🔄 Re-syncing Dart SDK worktree at: $WORKTREE_DIR"
+
+# 1. Pre-flight checks: depot_tools & gcert status
+if [ -d "$HOME/github/depot_tools" ]; then
+    export PATH="$HOME/github/depot_tools:$PATH"
+elif ! command -v gclient &>/dev/null; then
+    echo "❌ Error: depot_tools not found in PATH or at $HOME/github/depot_tools."
+    echo "   Clone it via: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/github/depot_tools"
+    exit 1
+fi
+
+export DEPOT_TOOLS_UPDATE=0
+export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
+mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
+
+if command -v gcertstatus &>/dev/null; then
+    if ! gcertstatus --check_remaining_hours=0.5 &>/dev/null; then
+        echo "❌ Error: gcert is expired or has less than 30 minutes remaining."
+        echo "   Please run 'gcert' in your terminal before syncing."
+        exit 1
+    fi
+fi
+
+# 2. Run gclient sync -D --no-history
+echo "🔗 Syncing external dependencies and CIPD packages..."
+(cd "$WORKTREE_DIR" && gclient sync -D --no-history)
+
+# 3. Empirical Verification Gate
+echo "🔍 Verifying sandbox toolchain health..."
+MISSING_TOOLS=0
+if [ ! -x "$WORKTREE_DIR/buildtools/gn" ]; then
+    echo "❌ Missing build tool: $WORKTREE_DIR/buildtools/gn"
+    MISSING_TOOLS=1
+fi
+if [ ! -x "$WORKTREE_DIR/buildtools/ninja/ninja" ]; then
+    echo "❌ Missing build tool: $WORKTREE_DIR/buildtools/ninja/ninja"
+    MISSING_TOOLS=1
+fi
+if [ ! -x "$WORKTREE_DIR/tools/sdks/dart-sdk/bin/dart" ]; then
+    echo "❌ Missing CIPD prebuilt SDK: $WORKTREE_DIR/tools/sdks/dart-sdk/bin/dart"
+    MISSING_TOOLS=1
+fi
+if [ ! -f "$WORKTREE_DIR/build/config/gclient_args.gni" ]; then
+    echo "❌ Missing gclient generated config: $WORKTREE_DIR/build/config/gclient_args.gni"
+    MISSING_TOOLS=1
+fi
+
+if [ "$MISSING_TOOLS" -ne 0 ]; then
+    echo "❌ Verification failed: Toolchain is still incomplete."
+    exit 1
+fi
+
+echo "✅ Sync complete and toolchain verified!"
+echo "💡 Tip: Ensure depot_tools is on PATH: export PATH=\"\$HOME/github/depot_tools:\$PATH\""

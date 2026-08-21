@@ -1,0 +1,1 @@
+../../bazel/main/sdk/tools/bazel/testing/resource_health.sh

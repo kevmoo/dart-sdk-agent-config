@@ -19,21 +19,68 @@ SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
 SOURCE_MAIN_DIR="$WORKSPACE_ROOT/$CATEGORY/main"
 
-export PATH="$HOME/github/depot_tools:$PATH"
+# 1. Pre-flight checks: depot_tools & gcert status
+if [ -d "$HOME/github/depot_tools" ]; then
+    export PATH="$HOME/github/depot_tools:$PATH"
+elif ! command -v gclient &>/dev/null; then
+    echo "❌ Error: depot_tools not found in PATH or at $HOME/github/depot_tools."
+    echo "   Clone it via: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/github/depot_tools"
+    exit 1
+fi
+
+# Prevent depot_tools from attempting auto-update fetch checks during execution
+export DEPOT_TOOLS_UPDATE=0
 export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
 mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
 
+# Pre-flight check for corp SSO / gcert if gcertstatus is available
+if command -v gcertstatus &>/dev/null; then
+    if ! gcertstatus --check_remaining_hours=0.5 &>/dev/null; then
+        echo "❌ Error: gcert is expired or has less than 30 minutes remaining."
+        echo "   Please run 'gcert' in your terminal before bootstrapping the SDK worktree."
+        exit 1
+    fi
+fi
+
+# Ensure bare repository database exists
+if [ ! -d "$BARE_DIR" ]; then
+    echo "❌ Error: Bare repository database not found at $BARE_DIR."
+    exit 1
+fi
+
+# Ensure sandbox does not already exist
+if [ -d "$SANDBOX_DIR" ]; then
+    echo "❌ Error: Sandbox directory already exists: $SANDBOX_DIR"
+    echo "   To remove it, run: $SCRIPT_DIR/rmagenttree $CATEGORY $TASK_NAME"
+    echo "   To re-sync it, run: $SCRIPT_DIR/syncagenttree $WORKTREE_DIR"
+    exit 1
+fi
+
+# Validate base ref if provided
+if [ -n "$BASE_REF" ]; then
+    if ! git --git-dir="$BARE_DIR" rev-parse --verify "$BASE_REF^{commit}" &>/dev/null; then
+        echo "❌ Error: Base ref '$BASE_REF' cannot be resolved in $BARE_DIR."
+        echo "   Run 'git --git-dir=$BARE_DIR fetch --all' and check the ref name."
+        exit 1
+    fi
+fi
+
 echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME using gclient-new-workdir..."
 
-# 1. Pre-warm and sanitize root checkout dependencies if present
+# 2. Pre-warm and sanitize root checkout dependencies if present
 if [ -d "$SOURCE_MAIN_DIR/sdk" ]; then
-    echo "🔗 Pre-warming and sanitizing root checkout dependencies ($SOURCE_MAIN_DIR/sdk)..."
+    echo "🔗 Pre-warming root checkout dependencies ($SOURCE_MAIN_DIR/sdk)..."
     (cd "$SOURCE_MAIN_DIR/sdk" && gclient sync -D --force --no-history) || echo "⚠️ Root gclient sync encountered non-fatal warnings; proceeding with workdir clone..."
 fi
 
-# 2. Use gclient-new-workdir.py to clone workspace layout from main
+# 3. Use gclient-new-workdir.py to clone workspace layout from main
 if [ -d "$SOURCE_MAIN_DIR" ]; then
     gclient-new-workdir.py --max-depth 1 "$SOURCE_MAIN_DIR" "$SANDBOX_DIR"
+    # Decouple .gclient: replace symlink with standalone copy so per-sandbox custom_vars don't mutate main
+    if [ -L "$SANDBOX_DIR/.gclient" ]; then
+        cp -L "$SANDBOX_DIR/.gclient" "$SANDBOX_DIR/.gclient.tmp"
+        mv "$SANDBOX_DIR/.gclient.tmp" "$SANDBOX_DIR/.gclient"
+    fi
 else
     # Fallback to manual setup if main root dir doesn't exist
     mkdir -p "$SANDBOX_DIR"
@@ -52,34 +99,54 @@ solutions = [
 EOF
 fi
 
-# 2. Checkout explicit base ref if requested and different from default
+# 4. Checkout explicit base ref if requested
 if [ -n "$BASE_REF" ]; then
     echo "🔀 Checking out requested base ref: $BASE_REF..."
     (cd "$WORKTREE_DIR" && git checkout --detach "$BASE_REF")
 fi
 
-# 3. Fast Sync Dependencies using shared git cache
-echo "🔗 Syncing external dependencies..."
-if (cd "$WORKTREE_DIR" && gclient sync); then
-    echo "✅ gclient sync succeeded."
-else
-    echo "⚠️ gclient sync failed. Attempting recovery by symlinking prebuilt Dart SDK from main..."
-    mkdir -p "$WORKTREE_DIR/tools/sdks"
-    if [ -d "$SOURCE_MAIN_DIR/sdk/tools/sdks/dart-sdk" ]; then
-        rm -rf "$WORKTREE_DIR/tools/sdks/dart-sdk"
-        ln -s "../../../../main/sdk/tools/sdks/dart-sdk" "$WORKTREE_DIR/tools/sdks/dart-sdk"
-        echo "🔗 Symlinked Dart SDK from main checkout."
-        echo "⚠️ WARNING: Sandbox is only PARTIALLY ready (Dart SDK symlinked, but other dependencies may be missing)!"
-    else
-        echo "❌ Prebuilt Dart SDK not found in main checkout ($SOURCE_MAIN_DIR/sdk/tools/sdks/dart-sdk)."
-        exit 1
-    fi
+# 5. Fast Sync Dependencies using shared git cache
+echo "🔗 Syncing external dependencies and CIPD packages..."
+if ! (cd "$WORKTREE_DIR" && gclient sync -D --no-history); then
+    echo "❌ Error: gclient sync failed in $WORKTREE_DIR."
+    echo "   Remediation steps:"
+    echo "   1. If gcert expired during sync, run 'gcert' in your terminal."
+    echo "   2. Re-sync via: $SCRIPT_DIR/syncagenttree $WORKTREE_DIR"
+    echo "   3. Or tear down via: $SCRIPT_DIR/rmagenttree $CATEGORY $TASK_NAME"
+    exit 1
 fi
 
-# 4. Hydrate Beads database if .beads exists but local storage is unhydrated
+# 6. Empirical Post-Bootstrap Verification Gate
+echo "🔍 Verifying sandbox toolchain health..."
+MISSING_TOOLS=0
+if [ ! -x "$WORKTREE_DIR/buildtools/gn" ]; then
+    echo "❌ Missing build tool: $WORKTREE_DIR/buildtools/gn"
+    MISSING_TOOLS=1
+fi
+if [ ! -x "$WORKTREE_DIR/buildtools/ninja/ninja" ]; then
+    echo "❌ Missing build tool: $WORKTREE_DIR/buildtools/ninja/ninja"
+    MISSING_TOOLS=1
+fi
+if [ ! -x "$WORKTREE_DIR/tools/sdks/dart-sdk/bin/dart" ]; then
+    echo "❌ Missing CIPD prebuilt SDK: $WORKTREE_DIR/tools/sdks/dart-sdk/bin/dart"
+    MISSING_TOOLS=1
+fi
+if [ ! -f "$WORKTREE_DIR/build/config/gclient_args.gni" ]; then
+    echo "❌ Missing gclient generated config: $WORKTREE_DIR/build/config/gclient_args.gni"
+    MISSING_TOOLS=1
+fi
+
+if [ "$MISSING_TOOLS" -ne 0 ]; then
+    echo "❌ Verification failed: Sandbox is not build-ready."
+    echo "   Run '$SCRIPT_DIR/syncagenttree $WORKTREE_DIR' to repair."
+    exit 1
+fi
+
+# 7. Hydrate Beads database if .beads exists but local storage is unhydrated
 if [ -d "$WORKTREE_DIR/.beads" ] && [ ! -d "$WORKTREE_DIR/.beads/embeddeddolt" ] && [ ! -d "$WORKTREE_DIR/.beads/dolt" ]; then
     echo "📊 Hydrating Beads issue database from remote..."
     (cd "$WORKTREE_DIR" && bd bootstrap)
 fi
 
 echo "✅ Sandbox ready! You can now cd into: $WORKTREE_DIR"
+echo "💡 Tip: Ensure depot_tools is on PATH: export PATH=\"\$HOME/github/depot_tools:\$PATH\""

@@ -54,19 +54,23 @@ If you are assigned a task, you must create a dedicated sandbox.
 ### Rule 3: How to initialize your Sandbox (Automated Flow)
 To set up your workspace instantly with proper caching and remote wiring, you **MUST** use our automated helper script:
 ```bash
-.agents/scripts/mkagenttree {thread} <task-name>
+.agents/scripts/mkagenttree {thread} <task-name> [base-ref]
 ```
-*(This automatically pre-warms and sanitizes the root checkout via `gclient sync -D --force`, creates the directory, maps `upstream-sdk/main` for Core or `origin/main` for Bazel, sets up `.gclient`, and runs a fast `gclient sync`).*
+*(This automatically verifies `gcertstatus`, pre-warms the root checkout via `gclient sync -D --force`, creates the directory, maps `upstream-sdk/main` for Core or `origin/main` for Bazel, sets up a decoupled `.gclient`, runs `gclient sync -D --no-history`, and empirically verifies all build tools before reporting success).*
 
-**Manual Underlying Equivalence (For Reference Only):**
-If you must run it manually:
-1. `mkdir -p {workspace-root}/{thread}/agent-{task-name}`
-2. Worktree add:
-   * For Core: `git --git-dir={bare-repo} worktree add {workspace-root}/core/agent-{task-name}/sdk upstream-sdk/main`
-   * For Bazel: `git --git-dir={bare-repo} worktree add {workspace-root}/bazel/agent-{task-name}/sdk origin/main`
-3. Create `.gclient` and run `gclient sync`.
+### Rule 4: Tooling Environment & PATH Invariant
+All SDK operations (`gclient`, `gn`, `ninja`, `python3 tools/build.py`, `tools/sdks/dart-sdk/bin/dart`) require `depot_tools` in your environment. Always ensure:
+```bash
+export PATH="$HOME/github/depot_tools:$PATH"
+export DEPOT_TOOLS_UPDATE=0
+```
+* On Google corp machines, ensure `gcert` is active before running build or sync operations.
+* **NEVER manually copy or symlink `buildtools/` or `build/config/gclient_args.gni` between worktrees**; doing so creates broken GN configurations. If dependencies or build tools are missing, always run our automated self-healing script:
+  ```bash
+  .agents/scripts/syncagenttree [path-to-sdk-or-sandbox]
+  ```
 
-### Rule 4: Clean up after yourself
+### Rule 5: Clean up after yourself
 Once your task is complete, submitted, and approved by the user, you should reclaim disk space immediately using our cleanup script:
 ```bash
 .agents/scripts/rmagenttree {thread} <task-name>

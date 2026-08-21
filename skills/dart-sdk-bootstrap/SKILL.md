@@ -14,8 +14,10 @@ This skill guides the interactive initialization, health checks, and teardown of
 
 Perform these steps sequentially when initializing a new task workspace:
 
-1. **Extract/Prompt Parameters (`ask_question`)**:
-   - Extract from user prompt or ask: **Work Thread** (`core` or `bazel`) and **Session Intent** (Create worktree now vs. just explore).
+1. **Pre-flight Tooling & Auth Checks**:
+   - **depot_tools on PATH**: Ensure `export PATH="$HOME/github/depot_tools:$PATH"` and `export DEPOT_TOOLS_UPDATE=0`.
+   - **gcert Verification**: On Google corp machines, verify `gcertstatus` is valid (>30m remaining) before running git or gclient operations.
+   - **Extract/Prompt Parameters (`ask_question`)**: Extract from user prompt or ask: **Work Thread** (`core` or `bazel`) and **Session Intent** (Create worktree now vs. just explore).
 
 2. **Inspect `{root-worktree}` Health**:
    Before creating a worktree or exploring, check `{workspace-root}/{thread}/main/sdk`:
@@ -24,11 +26,22 @@ Perform these steps sequentially when initializing a new task workspace:
    - **Check Sync**: Compare `HEAD` to the tracking remote (`upstream-sdk/main` for `core`, `origin/main` for `bazel`). If out of date, prompt the user (`ask_question`) to sync/pull.
 
 3. **Initialize Sandbox** (if creating worktree):
-   - Run the setup script:
+   - Run the automated setup script:
      ```bash
      .agents/scripts/mkagenttree <core|bazel> <task-name> [base-ref]
      ```
    - Change directory to `{sandbox-worktree}`: `cd {workspace-root}/{thread}/agent-{task-name}/sdk`.
+   - Ensure environment variables are active in your subagent shell:
+     ```bash
+     export PATH="$HOME/github/depot_tools:$PATH"
+     export DEPOT_TOOLS_UPDATE=0
+     ```
+
+4. **Self-Healing & Re-Sync (If Toolchain is Incomplete)**:
+   - If `buildtools/` (`gn`, `ninja`), CIPD SDK (`tools/sdks/dart-sdk`), or `build/config/gclient_args.gni` are missing, **never manually copy or symlink them across worktrees**. Run the self-healing script:
+     ```bash
+     .agents/scripts/syncagenttree {workspace-root}/{thread}/agent-{task-name}/sdk
+     ```
 
 ---
 
