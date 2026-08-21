@@ -38,9 +38,9 @@ Perform these steps sequentially when initializing a new task workspace:
      ```
 
 4. **Self-Healing & Re-Sync (If Toolchain is Incomplete)**:
-   - If `buildtools/` (`gn`, `ninja`), CIPD SDK (`tools/sdks/dart-sdk`), or `build/config/gclient_args.gni` are missing, **never manually copy or symlink them across worktrees**. Run the self-healing script:
+   - If `buildtools/` (`gn`, `ninja`), CIPD SDK (`tools/sdks/dart-sdk`), or `build/config/gclient_args.gni` are missing, **never manually copy or symlink them across worktrees**. Run the self-healing command:
      ```bash
-     .agents/scripts/syncagenttree {workspace-root}/{thread}/agent-{task-name}/sdk
+     .agents/scripts/mkagenttree --sync {workspace-root}/{thread}/agent-{task-name}/sdk
      ```
 
 ---

@@ -65,9 +65,9 @@ export PATH="$HOME/github/depot_tools:$PATH"
 export DEPOT_TOOLS_UPDATE=0
 ```
 * On Google corp machines, ensure `gcert` is active before running build or sync operations.
-* **NEVER manually copy or symlink `buildtools/` or `build/config/gclient_args.gni` between worktrees**; doing so creates broken GN configurations. If dependencies or build tools are missing, always run our automated self-healing script:
+* **NEVER manually copy or symlink `buildtools/` or `build/config/gclient_args.gni` between worktrees**; doing so creates broken GN configurations. If dependencies or build tools are missing, always run our automated self-healing command:
   ```bash
-  .agents/scripts/syncagenttree [path-to-sdk-or-sandbox]
+  .agents/scripts/mkagenttree --sync [path-to-sdk-or-sandbox]
   ```
 
 ### Rule 5: Clean up after yourself

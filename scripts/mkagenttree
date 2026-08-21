@@ -1,23 +1,13 @@
 #!/usr/bin/env bash
-# Automatically creates a fully configured Dart SDK sandbox worktree.
-# Usage: mkagenttree <core|bazel> <task-name> [base-branch-or-commit]
+# Automatically creates or re-syncs a fully configured Dart SDK sandbox worktree.
+# Usage:
+#   mkagenttree <core|bazel> <task-name> [base-ref]   # Create new sandbox worktree
+#   mkagenttree --sync [path-to-worktree]            # Re-sync / repair existing worktree
 set -euo pipefail
-
-if [ "$#" -lt 2 ]; then
-    echo "Usage: mkagenttree <core|bazel> <task-name> [base-ref]"
-    exit 1
-fi
-
-CATEGORY="$1"
-TASK_NAME="$2"
-BASE_REF="${3:-}"
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BARE_DIR="$WORKSPACE_ROOT/.bare"
-SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
-WORKTREE_DIR="$SANDBOX_DIR/sdk"
-SOURCE_MAIN_DIR="$WORKSPACE_ROOT/$CATEGORY/main"
 
 # 1. Pre-flight checks: depot_tools & gcert status
 if [ -d "$HOME/github/depot_tools" ]; then
@@ -37,10 +27,78 @@ mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
 if command -v gcertstatus &>/dev/null; then
     if ! gcertstatus --check_remaining_hours=0.5 &>/dev/null; then
         echo "❌ Error: gcert is expired or has less than 30 minutes remaining."
-        echo "   Please run 'gcert' in your terminal before bootstrapping the SDK worktree."
+        echo "   Please run 'gcert' in your terminal before running SDK bootstrap or sync."
         exit 1
     fi
 fi
+
+# Function: Verify toolchain health
+verify_toolchain() {
+    local worktree="$1"
+    echo "🔍 Verifying sandbox toolchain health..."
+    local missing=0
+    if [ ! -x "$worktree/buildtools/gn" ]; then
+        echo "❌ Missing build tool: $worktree/buildtools/gn"
+        missing=1
+    fi
+    if [ ! -x "$worktree/buildtools/ninja/ninja" ]; then
+        echo "❌ Missing build tool: $worktree/buildtools/ninja/ninja"
+        missing=1
+    fi
+    if [ ! -x "$worktree/tools/sdks/dart-sdk/bin/dart" ]; then
+        echo "❌ Missing CIPD prebuilt SDK: $worktree/tools/sdks/dart-sdk/bin/dart"
+        missing=1
+    fi
+    if [ ! -f "$worktree/build/config/gclient_args.gni" ]; then
+        echo "❌ Missing gclient generated config: $worktree/build/config/gclient_args.gni"
+        missing=1
+    fi
+
+    if [ "$missing" -ne 0 ]; then
+        echo "❌ Verification failed: Toolchain is incomplete."
+        echo "   Run '$SCRIPT_DIR/mkagenttree --sync $worktree' to repair."
+        return 1
+    fi
+    return 0
+}
+
+# Check for --sync or --repair mode
+if [ "${1:-}" = "--sync" ] || [ "${1:-}" = "--repair" ] || [ "${1:-}" = "-s" ]; then
+    TARGET_PATH="${2:-$PWD}"
+    if [ -d "$TARGET_PATH/sdk" ]; then
+        WORKTREE_DIR="$(cd "$TARGET_PATH/sdk" && pwd)"
+    elif [ -f "$TARGET_PATH/DEPS" ] || [ -d "$TARGET_PATH/.git" ]; then
+        WORKTREE_DIR="$(cd "$TARGET_PATH" && pwd)"
+    else
+        echo "❌ Error: Cannot locate Dart SDK worktree in '$TARGET_PATH'."
+        echo "   Usage: mkagenttree --sync [path-to-sdk-or-sandbox-worktree]"
+        exit 1
+    fi
+
+    echo "🔄 Re-syncing Dart SDK worktree at: $WORKTREE_DIR"
+    echo "🔗 Syncing external dependencies and CIPD packages..."
+    (cd "$WORKTREE_DIR" && gclient sync -D --no-history)
+    verify_toolchain "$WORKTREE_DIR"
+    echo "✅ Sync complete and toolchain verified!"
+    echo "💡 Tip: Ensure depot_tools is on PATH: export PATH=\"\$HOME/github/depot_tools:\$PATH\""
+    exit 0
+fi
+
+# Standard creation mode: requires <core|bazel> <task-name> [base-ref]
+if [ "$#" -lt 2 ]; then
+    echo "Usage:"
+    echo "  mkagenttree <core|bazel> <task-name> [base-ref]   # Create new sandbox worktree"
+    echo "  mkagenttree --sync [path-to-worktree]            # Re-sync / repair existing worktree"
+    exit 1
+fi
+
+CATEGORY="$1"
+TASK_NAME="$2"
+BASE_REF="${3:-}"
+
+SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
+WORKTREE_DIR="$SANDBOX_DIR/sdk"
+SOURCE_MAIN_DIR="$WORKSPACE_ROOT/$CATEGORY/main"
 
 # Ensure bare repository database exists
 if [ ! -d "$BARE_DIR" ]; then
@@ -52,7 +110,7 @@ fi
 if [ -d "$SANDBOX_DIR" ]; then
     echo "❌ Error: Sandbox directory already exists: $SANDBOX_DIR"
     echo "   To remove it, run: $SCRIPT_DIR/rmagenttree $CATEGORY $TASK_NAME"
-    echo "   To re-sync it, run: $SCRIPT_DIR/syncagenttree $WORKTREE_DIR"
+    echo "   To re-sync it, run: $SCRIPT_DIR/mkagenttree --sync $WORKTREE_DIR"
     exit 1
 fi
 
@@ -111,36 +169,13 @@ if ! (cd "$WORKTREE_DIR" && gclient sync -D --no-history); then
     echo "❌ Error: gclient sync failed in $WORKTREE_DIR."
     echo "   Remediation steps:"
     echo "   1. If gcert expired during sync, run 'gcert' in your terminal."
-    echo "   2. Re-sync via: $SCRIPT_DIR/syncagenttree $WORKTREE_DIR"
+    echo "   2. Re-sync via: $SCRIPT_DIR/mkagenttree --sync $WORKTREE_DIR"
     echo "   3. Or tear down via: $SCRIPT_DIR/rmagenttree $CATEGORY $TASK_NAME"
     exit 1
 fi
 
 # 6. Empirical Post-Bootstrap Verification Gate
-echo "🔍 Verifying sandbox toolchain health..."
-MISSING_TOOLS=0
-if [ ! -x "$WORKTREE_DIR/buildtools/gn" ]; then
-    echo "❌ Missing build tool: $WORKTREE_DIR/buildtools/gn"
-    MISSING_TOOLS=1
-fi
-if [ ! -x "$WORKTREE_DIR/buildtools/ninja/ninja" ]; then
-    echo "❌ Missing build tool: $WORKTREE_DIR/buildtools/ninja/ninja"
-    MISSING_TOOLS=1
-fi
-if [ ! -x "$WORKTREE_DIR/tools/sdks/dart-sdk/bin/dart" ]; then
-    echo "❌ Missing CIPD prebuilt SDK: $WORKTREE_DIR/tools/sdks/dart-sdk/bin/dart"
-    MISSING_TOOLS=1
-fi
-if [ ! -f "$WORKTREE_DIR/build/config/gclient_args.gni" ]; then
-    echo "❌ Missing gclient generated config: $WORKTREE_DIR/build/config/gclient_args.gni"
-    MISSING_TOOLS=1
-fi
-
-if [ "$MISSING_TOOLS" -ne 0 ]; then
-    echo "❌ Verification failed: Sandbox is not build-ready."
-    echo "   Run '$SCRIPT_DIR/syncagenttree $WORKTREE_DIR' to repair."
-    exit 1
-fi
+verify_toolchain "$WORKTREE_DIR"
 
 # 7. Hydrate Beads database if .beads exists but local storage is unhydrated
 if [ -d "$WORKTREE_DIR/.beads" ] && [ ! -d "$WORKTREE_DIR/.beads/embeddeddolt" ] && [ ! -d "$WORKTREE_DIR/.beads/dolt" ]; then
