@@ -25,7 +25,7 @@ mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
 
 # Pre-flight check for corp SSO / gcert if gcertstatus is available
 if command -v gcertstatus &>/dev/null; then
-    if ! gcertstatus --check_remaining_hours=0.5 &>/dev/null; then
+    if ! gcertstatus --check_remaining=30m --quiet=true &>/dev/null; then
         echo "❌ Error: gcert is expired or has less than 30 minutes remaining."
         echo "   Please run 'gcert' in your terminal before running SDK bootstrap or sync."
         exit 1
@@ -142,7 +142,11 @@ if [ -d "$SOURCE_MAIN_DIR" ]; then
 else
     # Fallback to manual setup if main root dir doesn't exist
     mkdir -p "$SANDBOX_DIR"
-    git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "${BASE_REF:-upstream-sdk/main}"
+    DEFAULT_REF="upstream-sdk/main"
+    if [ "$CATEGORY" = "bazel" ]; then
+        DEFAULT_REF="origin/main"
+    fi
+    git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "${BASE_REF:-$DEFAULT_REF}"
     cat > "$SANDBOX_DIR/.gclient" <<EOF
 solutions = [
   {
