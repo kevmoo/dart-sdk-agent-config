@@ -16,7 +16,7 @@ Perform these steps sequentially when initializing a new task workspace:
 
 1. **Pre-flight Tooling & Auth Checks**:
    - **depot_tools on PATH**: Ensure `export PATH="$HOME/github/depot_tools:$PATH"` and `export DEPOT_TOOLS_UPDATE=0`.
-   - **gcert Verification**: On Google corp machines, verify `gcertstatus` is valid (>30m remaining) before running git or gclient operations.
+   - **Authentication / SSO Verification**: If operating in an environment with corporate SSO tooling (e.g. `gcertstatus`), verify credentials are valid (>30m remaining) before running git or gclient operations.
    - **Extract/Prompt Parameters (`ask_question`)**: Extract from user prompt or ask: **Work Thread** (`core` or `bazel`) and **Session Intent** (Create worktree now vs. just explore).
 
 2. **Inspect `{root-worktree}` Health**:

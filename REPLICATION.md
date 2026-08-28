@@ -36,22 +36,24 @@ git --git-dir=$HOME/github/dart-sdk/.bare fetch --all
 git clone git@github.com:kevmoo/dart-sdk-agent-config.git ~/github/dart-sdk/.agents
 ```
 
-### Step 3.5: Configure Bazel Machine Caching & GCS Authentication
-To prevent local disk space from growing unbounded while leveraging the shared team GCS remote cache, configure `~/.bazelrc` and authenticate:
+### Step 3.5: Configure Bazel Disk Caching & Optional Remote Cache
+To prevent local disk space from growing unbounded while enabling fast rebuilds, configure local garbage-collected disk caching in `~/.bazelrc`:
 ```bash
-# Populate machine-global Bazel flags
-cat > ~/.bazelrc <<EOF
-build --config=remote-cache
-build --remote_cache_async
-build --experimental_repository_cache_hardlinks
+# Append machine-global Bazel disk cache flags
+cat >> ~/.bazelrc <<EOF
 # A local disk cache must be set for the GC size/age limits below to apply.
 build --disk_cache=~/.cache/bazel-disk-cache
 build --experimental_disk_cache_gc_max_size=50G
 build --experimental_disk_cache_gc_max_age=14d
+build --experimental_repository_cache_hardlinks
 EOF
 
-# Authenticate against Google Cloud Storage
-gcloud auth application-default login
+# (Optional / Team Specific): If collaborating with the shared team GCS remote cache:
+# cat >> ~/.bazelrc <<EOF
+# build --config=remote-cache
+# build --remote_cache_async
+# EOF
+# gcloud auth application-default login
 ```
 
 ### Step 4: Verify by Spinning Up Your First Sandbox

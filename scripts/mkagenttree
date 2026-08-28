@@ -9,13 +9,17 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BARE_DIR="$WORKSPACE_ROOT/.bare"
 
-# 1. Pre-flight checks: depot_tools & gcert status
-if [ -d "$HOME/github/depot_tools" ]; then
-    export PATH="$HOME/github/depot_tools:$PATH"
-elif ! command -v gclient &>/dev/null; then
-    echo "❌ Error: depot_tools not found in PATH or at $HOME/github/depot_tools."
-    echo "   Clone it via: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/github/depot_tools"
-    exit 1
+# 1. Pre-flight checks: depot_tools & corporate SSO status
+if ! command -v gclient &>/dev/null; then
+    if [ -d "$HOME/github/depot_tools" ]; then
+        export PATH="$HOME/github/depot_tools:$PATH"
+    elif [ -d "$HOME/depot_tools" ]; then
+        export PATH="$HOME/depot_tools:$PATH"
+    else
+        echo "❌ Error: depot_tools (gclient) not found in PATH or standard locations."
+        echo "   Please add depot_tools to your PATH or clone it via: git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git ~/depot_tools"
+        exit 1
+    fi
 fi
 
 # Prevent depot_tools from attempting auto-update fetch checks during execution
@@ -23,11 +27,11 @@ export DEPOT_TOOLS_UPDATE=0
 export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
 mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
 
-# Pre-flight check for corp SSO / gcert if gcertstatus is available
+# Pre-flight check for corp SSO if gcertstatus is available
 if command -v gcertstatus &>/dev/null; then
     if ! gcertstatus --check_remaining=30m --quiet=true &>/dev/null; then
-        echo "❌ Error: gcert is expired or has less than 30 minutes remaining."
-        echo "   Please run 'gcert' in your terminal before running SDK bootstrap or sync."
+        echo "❌ Error: Corporate SSO credentials (gcert) are expired or have less than 30 minutes remaining."
+        echo "   Please refresh your SSO authentication (e.g. run 'gcert') before running SDK bootstrap or sync."
         exit 1
     fi
 fi
@@ -174,7 +178,7 @@ echo "🔗 Syncing external dependencies and CIPD packages..."
 if ! (cd "$WORKTREE_DIR" && gclient sync -D --no-history); then
     echo "❌ Error: gclient sync failed in $WORKTREE_DIR."
     echo "   Remediation steps:"
-    echo "   1. If gcert expired during sync, run 'gcert' in your terminal."
+    echo "   1. If using corp authentication, ensure your SSO credentials (e.g. gcert) are active."
     echo "   2. Re-sync via: $SCRIPT_DIR/mkagenttree --sync $WORKTREE_DIR"
     echo "   3. Or tear down via: $SCRIPT_DIR/rmagenttree $CATEGORY $TASK_NAME"
     exit 1

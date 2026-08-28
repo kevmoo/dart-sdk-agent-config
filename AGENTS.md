@@ -64,7 +64,7 @@ All SDK operations (`gclient`, `gn`, `ninja`, `python3 tools/build.py`, `tools/s
 export PATH="$HOME/github/depot_tools:$PATH"
 export DEPOT_TOOLS_UPDATE=0
 ```
-* On Google corp machines, ensure `gcert` is active before running build or sync operations.
+* If operating in an environment requiring corporate SSO authentication, ensure credentials (e.g. `gcert`) are active before running build or sync operations.
 * **NEVER manually copy or symlink `buildtools/` or `build/config/gclient_args.gni` between worktrees**; doing so creates broken GN configurations. If dependencies or build tools are missing, always run our automated self-healing command:
   ```bash
   .agents/scripts/mkagenttree --sync [path-to-sdk-or-sandbox]
@@ -119,7 +119,7 @@ The **Bazel thread (`bazel`)** uses **beads** (`bd`) for local task tracking and
 >
 > **BEAD CLOSURE RULE**: Keep tasks in `IN_PROGRESS` status throughout active development, local testing, and PR review. **ONLY run `bd close` after code has landed on `main`** (immediately after a direct push to `main`, or after a PR merges into `main`).
 
-For the complete guide on setup, daily workflows, multi-user `--repo` routing guardrails, and Dolt/SSH push troubleshooting, refer to the `sdk-bazel-beads` skill and 👉 **[docs/bazel-migration/BEADS.md](../../bazel/main/sdk/docs/bazel-migration/BEADS.md)**.
+For the complete guide on setup, daily workflows, multi-user `--repo` routing guardrails, and Dolt/SSH push troubleshooting, refer to the `sdk-bazel-beads` skill and 👉 **[docs/bazel-migration/BEADS.md](../bazel/main/sdk/docs/bazel-migration/BEADS.md)**.
 
 ---
 
@@ -127,7 +127,7 @@ For the complete guide on setup, daily workflows, multi-user `--repo` routing gu
 
 All agents operating on the Bazel thread (`bazel`) MUST strictly adhere to our 14 Bazel architectural migration rules (covering bottom-up hybrid migration, direct header deps, hermetic timestamps, `copy_file` rules, and determinism).
 
-For the full architectural rulebook, refer to: 👉 **[docs/bazel-migration/GUIDELINES.md](../../bazel/main/sdk/docs/bazel-migration/GUIDELINES.md)**.
+For the full architectural rulebook, refer to: 👉 **[docs/bazel-migration/GUIDELINES.md](../bazel/main/sdk/docs/bazel-migration/GUIDELINES.md)**.
 
 ---
 

@@ -82,7 +82,7 @@ Mutator threads operate under explicit states defined in `runtime/vm/heap/safepo
 
 ## 5. Reviewer Priorities & Standards (Gerrit)
 
-Common review themes from VM owners (Slava Egorov, Alexander Markov, Tess Strickland, Ryan Macnak):
+Common review themes from VM owners and Gerrit reviewers:
 
 1. **Safepoint Integrity**: Strict verification that no raw pointers cross potential GC safepoints or allocation sites.
 2. **Virtual Integration over Ad-hoc Branches**: Prefer extending existing polymorphic methods (e.g. `InitialValueForSlot` on `Definition`) rather than adding bespoke `if/else` checks across compiler passes.
