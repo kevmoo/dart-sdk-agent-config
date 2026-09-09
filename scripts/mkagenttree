@@ -24,12 +24,18 @@ fi
 
 # Prevent depot_tools from attempting auto-update fetch checks during execution
 export DEPOT_TOOLS_UPDATE=0
-export DEPOT_TOOLS_GIT_CACHE_DIR="$WORKSPACE_ROOT/.git_cache"
-mkdir -p "$DEPOT_TOOLS_GIT_CACHE_DIR"
+
+# Configure depot_tools native shared Git cache
+export GIT_CACHE_PATH="${GIT_CACHE_PATH:-$HOME/.cache/git_cache}"
+mkdir -p "$GIT_CACHE_PATH"
+if [ ! -w "$GIT_CACHE_PATH" ]; then
+    echo "❌ Error: GIT_CACHE_PATH ($GIT_CACHE_PATH) is not writable."
+    exit 1
+fi
 
 # Pre-flight check for corp SSO if gcertstatus is available
 if command -v gcertstatus &>/dev/null; then
-    if ! gcertstatus --check_remaining=30m --quiet=true &>/dev/null; then
+    if ! gcertstatus --check_remaining=30m --check_ssh=false --quiet=true &>/dev/null; then
         echo "❌ Error: Corporate SSO credentials (gcert) are expired or have less than 30 minutes remaining."
         echo "   Please refresh your SSO authentication (e.g. run 'gcert') before running SDK bootstrap or sync."
         exit 1
