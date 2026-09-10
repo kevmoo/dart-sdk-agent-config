@@ -27,6 +27,9 @@ export DEPOT_TOOLS_UPDATE=0
 
 # Configure depot_tools native shared Git cache
 export GIT_CACHE_PATH="${GIT_CACHE_PATH:-$HOME/.cache/git_cache}"
+# Force files ref format so depot_tools bootstrap snapshots (files backend)
+# don't conflict with newer Git defaults (reftable).
+export GIT_DEFAULT_REF_FORMAT=files
 mkdir -p "$GIT_CACHE_PATH"
 if [ ! -w "$GIT_CACHE_PATH" ]; then
     echo "❌ Error: GIT_CACHE_PATH ($GIT_CACHE_PATH) is not writable."
