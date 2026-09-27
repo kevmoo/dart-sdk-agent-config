@@ -6,7 +6,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+WORKSPACE_ROOT="${DART_SDK_WORKSPACE_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 BARE_DIR="$WORKSPACE_ROOT/.bare"
 
 # 1. Pre-flight checks: depot_tools & corporate SSO status
@@ -100,6 +100,13 @@ if [ "${1:-}" = "--sync" ] || [ "${1:-}" = "--repair" ] || [ "${1:-}" = "-s" ]; 
 fi
 
 # Standard creation mode: requires <core|bazel> <task-name> [base-ref]
+if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
+    echo "Usage:"
+    echo "  mkagenttree <core|bazel> <task-name> [base-ref]   # Create new sandbox worktree"
+    echo "  mkagenttree --sync [path-to-worktree]            # Re-sync / repair existing worktree"
+    exit 0
+fi
+
 if [ "$#" -lt 2 ]; then
     echo "Usage:"
     echo "  mkagenttree <core|bazel> <task-name> [base-ref]   # Create new sandbox worktree"
@@ -109,7 +116,25 @@ fi
 
 CATEGORY="$1"
 TASK_NAME="$2"
-BASE_REF="${3:-}"
+
+case "$CATEGORY" in
+    core)
+        DEFAULT_REMOTE="upstream-sdk"
+        DEFAULT_BRANCH="main"
+        ;;
+    bazel)
+        DEFAULT_REMOTE="origin"
+        DEFAULT_BRANCH="main"
+        ;;
+    *)
+        echo "❌ Error: Invalid category '$CATEGORY' (expected 'core' or 'bazel')."
+        echo "   Usage: mkagenttree <core|bazel> <task-name> [base-ref]"
+        exit 1
+        ;;
+esac
+
+DEFAULT_REF="$DEFAULT_REMOTE/$DEFAULT_BRANCH"
+BASE_REF="${3:-$DEFAULT_REF}"
 
 SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
@@ -129,39 +154,57 @@ if [ -d "$SANDBOX_DIR" ]; then
     exit 1
 fi
 
-# Validate base ref if provided
-if [ -n "$BASE_REF" ]; then
-    if ! git --git-dir="$BARE_DIR" rev-parse --verify "$BASE_REF^{commit}" &>/dev/null; then
-        echo "❌ Error: Base ref '$BASE_REF' cannot be resolved in $BARE_DIR."
-        echo "   Run 'git --git-dir=$BARE_DIR fetch --all' and check the ref name."
-        exit 1
+# 2. Fetch target remote ref (non-fatal if offline and ref is already local)
+FETCH_REMOTE="$DEFAULT_REMOTE"
+FETCH_BRANCH="$DEFAULT_BRANCH"
+if [[ "$BASE_REF" == */* ]]; then
+    CANDIDATE_REMOTE="${BASE_REF%%/*}"
+    CANDIDATE_BRANCH="${BASE_REF#*/}"
+    if git --git-dir="$BARE_DIR" remote get-url "$CANDIDATE_REMOTE" &>/dev/null; then
+        FETCH_REMOTE="$CANDIDATE_REMOTE"
+        FETCH_BRANCH="$CANDIDATE_BRANCH"
     fi
 fi
 
-echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME using gclient-new-workdir..."
-
-# 2. Pre-warm and sanitize root checkout dependencies if present
-if [ -d "$SOURCE_MAIN_DIR/sdk" ]; then
-    echo "🔗 Pre-warming root checkout dependencies ($SOURCE_MAIN_DIR/sdk)..."
-    (cd "$SOURCE_MAIN_DIR/sdk" && gclient sync -D --force --no-history) || echo "⚠️ Root gclient sync encountered non-fatal warnings; proceeding with workdir clone..."
+echo "🔄 Fetching latest '$FETCH_REMOTE/$FETCH_BRANCH' in bare repository..."
+if ! git --git-dir="$BARE_DIR" fetch --quiet "$FETCH_REMOTE" "$FETCH_BRANCH"; then
+    echo "⚠️ Warning: Failed to fetch '$FETCH_REMOTE' '$FETCH_BRANCH'; falling back to local refs in $BARE_DIR."
 fi
 
-# 3. Use gclient-new-workdir.py to clone workspace layout from main
-if [ -d "$SOURCE_MAIN_DIR" ]; then
-    gclient-new-workdir.py --max-depth 1 "$SOURCE_MAIN_DIR" "$SANDBOX_DIR"
+# Validate base ref
+if ! git --git-dir="$BARE_DIR" rev-parse --verify "$BASE_REF^{commit}" &>/dev/null; then
+    echo "❌ Error: Base ref '$BASE_REF' cannot be resolved in $BARE_DIR."
+    echo "   Run 'git --git-dir=$BARE_DIR fetch --all' and check the ref name."
+    exit 1
+fi
+
+echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME..."
+
+# 3. Clone workspace layout from main (if initialized) or fall back to direct worktree add
+if [ -f "$SOURCE_MAIN_DIR/.gclient" ] && [ -e "$SOURCE_MAIN_DIR/sdk/.git" ]; then
+    gclient-new-workdir.py --use-git-worktree --max-depth 1 "$SOURCE_MAIN_DIR" "$SANDBOX_DIR"
     # Decouple .gclient: replace symlink with standalone copy so per-sandbox custom_vars don't mutate main
     if [ -L "$SANDBOX_DIR/.gclient" ]; then
         cp -L "$SANDBOX_DIR/.gclient" "$SANDBOX_DIR/.gclient.tmp"
         mv "$SANDBOX_DIR/.gclient.tmp" "$SANDBOX_DIR/.gclient"
     fi
-else
-    # Fallback to manual setup if main root dir doesn't exist
-    mkdir -p "$SANDBOX_DIR"
-    DEFAULT_REF="upstream-sdk/main"
-    if [ "$CATEGORY" = "bazel" ]; then
-        DEFAULT_REF="origin/main"
+
+    # 4. Checkout target base ref detached
+    echo "🔀 Checking out base ref: $BASE_REF..."
+    if ! (cd "$WORKTREE_DIR" && git checkout --detach "$BASE_REF"); then
+        echo "❌ Error: Failed to checkout '$BASE_REF' in $WORKTREE_DIR."
+        echo "   To tear down the partial sandbox, run: $SCRIPT_DIR/rmagenttree $CATEGORY $TASK_NAME"
+        exit 1
     fi
-    git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "${BASE_REF:-$DEFAULT_REF}"
+else
+    # Fallback to manual setup if main root worktree doesn't exist
+    mkdir -p "$SANDBOX_DIR"
+    echo "🔀 Creating worktree detached at base ref: $BASE_REF..."
+    if ! git --git-dir="$BARE_DIR" worktree add --detach "$WORKTREE_DIR" "$BASE_REF"; then
+        echo "❌ Error: Failed to create worktree for '$BASE_REF' at $WORKTREE_DIR."
+        echo "   To tear down the partial sandbox, run: $SCRIPT_DIR/rmagenttree $CATEGORY $TASK_NAME"
+        exit 1
+    fi
     cat > "$SANDBOX_DIR/.gclient" <<EOF
 solutions = [
   {
@@ -174,12 +217,6 @@ solutions = [
   },
 ]
 EOF
-fi
-
-# 4. Checkout explicit base ref if requested
-if [ -n "$BASE_REF" ]; then
-    echo "🔀 Checking out requested base ref: $BASE_REF..."
-    (cd "$WORKTREE_DIR" && git checkout --detach "$BASE_REF")
 fi
 
 # 5. Fast Sync Dependencies using shared git cache
