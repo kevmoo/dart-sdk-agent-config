@@ -109,7 +109,12 @@ fi
 
 CATEGORY="$1"
 TASK_NAME="$2"
-BASE_REF="${3:-}"
+
+DEFAULT_REF="upstream-sdk/main"
+if [ "$CATEGORY" = "bazel" ]; then
+    DEFAULT_REF="origin/main"
+fi
+BASE_REF="${3:-$DEFAULT_REF}"
 
 SANDBOX_DIR="$WORKSPACE_ROOT/$CATEGORY/agent-$TASK_NAME"
 WORKTREE_DIR="$SANDBOX_DIR/sdk"
@@ -129,22 +134,18 @@ if [ -d "$SANDBOX_DIR" ]; then
     exit 1
 fi
 
-# Validate base ref if provided
-if [ -n "$BASE_REF" ]; then
-    if ! git --git-dir="$BARE_DIR" rev-parse --verify "$BASE_REF^{commit}" &>/dev/null; then
-        echo "❌ Error: Base ref '$BASE_REF' cannot be resolved in $BARE_DIR."
-        echo "   Run 'git --git-dir=$BARE_DIR fetch --all' and check the ref name."
-        exit 1
-    fi
+# Fetch latest refs so validation succeeds if BASE_REF is new
+echo "🔄 Fetching latest refs in bare repository..."
+git --git-dir="$BARE_DIR" fetch --all --quiet
+
+# Validate base ref
+if ! git --git-dir="$BARE_DIR" rev-parse --verify "$BASE_REF^{commit}" &>/dev/null; then
+    echo "❌ Error: Base ref '$BASE_REF' cannot be resolved in $BARE_DIR."
+    echo "   Ensure the remote ref exists."
+    exit 1
 fi
 
 echo "🚀 Creating $CATEGORY sandbox: agent-$TASK_NAME using gclient-new-workdir..."
-
-# 2. Pre-warm and sanitize root checkout dependencies if present
-if [ -d "$SOURCE_MAIN_DIR/sdk" ]; then
-    echo "🔗 Pre-warming root checkout dependencies ($SOURCE_MAIN_DIR/sdk)..."
-    (cd "$SOURCE_MAIN_DIR/sdk" && gclient sync -D --force --no-history) || echo "⚠️ Root gclient sync encountered non-fatal warnings; proceeding with workdir clone..."
-fi
 
 # 3. Use gclient-new-workdir.py to clone workspace layout from main
 if [ -d "$SOURCE_MAIN_DIR" ]; then
@@ -157,11 +158,7 @@ if [ -d "$SOURCE_MAIN_DIR" ]; then
 else
     # Fallback to manual setup if main root dir doesn't exist
     mkdir -p "$SANDBOX_DIR"
-    DEFAULT_REF="upstream-sdk/main"
-    if [ "$CATEGORY" = "bazel" ]; then
-        DEFAULT_REF="origin/main"
-    fi
-    git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "${BASE_REF:-$DEFAULT_REF}"
+    git --git-dir="$BARE_DIR" worktree add "$WORKTREE_DIR" "$BASE_REF"
     cat > "$SANDBOX_DIR/.gclient" <<EOF
 solutions = [
   {
