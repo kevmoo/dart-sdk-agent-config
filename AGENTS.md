@@ -87,11 +87,11 @@ To set up your workspace instantly with proper caching and remote wiring, you
 .agents/scripts/mkagenttree {thread} <task-name> [base-ref]
 ```
 
-_(This automatically verifies `gcertstatus`, pre-warms the root checkout via
-`gclient sync -D --force`, creates the directory, maps `upstream-sdk/main` for
-Core or `origin/main` for Bazel, sets up a decoupled `.gclient`, runs
-`gclient sync -D --no-history`, and empirically verifies all build tools before
-reporting success)._
+_(This automatically verifies `gcertstatus`, fetches the latest target remote
+ref (`upstream-sdk/main` for Core or `origin/main` for Bazel), creates the
+sandbox worktree detached at the requested or default `base-ref`, sets up a
+decoupled `.gclient`, runs `gclient sync -D --no-history`, and empirically
+verifies all build tools before reporting success)._
 
 ### Rule 4: Tooling Environment & PATH Invariant
 

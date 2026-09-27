@@ -57,7 +57,7 @@ EOF
 ```
 
 ### Step 4: Verify by Spinning Up Your First Sandbox
-Use our automated helper script to instantly pre-warm and sanitize the root checkout (`gclient sync -D --force`), create a pristine task sandbox, set up hermetic dependencies, and run a lightning-fast `gclient sync` using a shared Git cache:
+Use our automated helper script to fetch the latest upstream ref, create a pristine task sandbox, set up hermetic dependencies, and run a lightning-fast `gclient sync` using a shared Git cache:
 ```bash
 ~/github/dart-sdk/.agents/scripts/mkagenttree core agent-first-setup
 ```
@@ -72,4 +72,4 @@ Our sandbox architecture introduces an exceptionally elegant dependency manageme
 2.  **`"managed": False`:** This critical setting tells `depot_tools` **not** to manage or overwrite the primary `sdk/` Git checkout. Instead, it fully respects our pristine Git Worktree as the absolute source of truth.
 3.  **Hermetic Tooling Sync:** When `gclient sync` runs, it simply reads the `DEPS` file located inside our active worktree (`sdk/DEPS`) and fetches only the required external third-party libraries, toolchains, and prebuilt binaries.
 4.  **Shared Disk Caching:** By configuring `GIT_CACHE_PATH=~/.cache/git_cache`, `depot_tools` maintains bare mirror clones of external Git dependencies centrally on disk. Every new task sandbox syncs from this shared local cache, reducing `gclient sync` times from several minutes over the network to just a few seconds.
-5.  **Root Checkout Sanitization:** Before cloning a new sandbox, `mkagenttree` automatically runs `gclient sync -D --force --no-history` inside the root checkout (`core/main/sdk` or `bazel/main/sdk`). This aggressively prunes removed dependencies and self-heals submodule pointers, ensuring new sandboxes never inherit broken or stale third-party states.
+5.  **Deterministic Base Ref & Dependency Pruning:** Before syncing a new sandbox, `mkagenttree` fetches the target remote ref in `.bare`, checks out the requested or default `base-ref` (`upstream-sdk/main` for `core`, `origin/main` for `bazel`) in detached `HEAD` mode, and runs `gclient sync -D --no-history` inside the new sandbox to prune removed dependencies and hydrate CIPD toolchains.
