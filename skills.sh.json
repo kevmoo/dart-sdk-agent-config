@@ -3,7 +3,7 @@
   "notGrouped": "bottom",
   "groupings": [
     {
-      "title": "Sandbox & Upstream Sync",
+      "title": "SDK Worktrees",
       "description": "Skills for bootstrapping bare-repository Dart SDK worktrees and merging upstream LKGR changes.",
       "skills": [
         "dart-sdk-bootstrap",
@@ -11,7 +11,7 @@
       ]
     },
     {
-      "title": "Bazel & Pre-PR Verification",
+      "title": "Bazel",
       "description": "Skills for validating Bazel rules and pre-flight checks before opening Dart SDK pull requests.",
       "skills": [
         "bazel-pre-pr"
