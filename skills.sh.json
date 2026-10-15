@@ -1,0 +1,21 @@
+{
+  "$schema": "https://skills.sh/schemas/skills.sh.schema.json",
+  "notGrouped": "bottom",
+  "groupings": [
+    {
+      "title": "Sandbox & Upstream Sync",
+      "description": "Skills for bootstrapping bare-repository Dart SDK worktrees and merging upstream LKGR changes.",
+      "skills": [
+        "dart-sdk-bootstrap",
+        "dart-sdk-merge-upstream"
+      ]
+    },
+    {
+      "title": "Bazel & Pre-PR Verification",
+      "description": "Skills for validating Bazel rules and pre-flight checks before opening Dart SDK pull requests.",
+      "skills": [
+        "bazel-pre-pr"
+      ]
+    }
+  ]
+}
