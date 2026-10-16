@@ -189,6 +189,9 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
       `~/github/flutter/bin/cache/dart-sdk/bin/snapshots/dart2wasm_product.snapshot`
       using an `EXIT` `trap` to restore the original backup automatically after
       `flutter build web --wasm` or `flutter_web_perf` completes.
+5.  **Dart VM C++ Best Practices (`runtime/vm/`)**: When authoring or reviewing
+    C++ code in `runtime/vm/`, read
+    [references/dart_vm_cpp_best_practices.md](references/dart_vm_cpp_best_practices.md).
 
 ---
 
@@ -236,8 +239,8 @@ Dolt database synchronization.
 
 For the complete guide on setup, daily workflows, multi-user `--repo` routing
 guardrails, and Dolt/SSH push troubleshooting, refer to the `sdk-bazel-beads`
-skill and 👉
-**[docs/bazel-migration/BEADS.md](../bazel/main/sdk/docs/bazel-migration/BEADS.md)**.
+skill and `../bazel/main/sdk/docs/bazel-migration/BEADS.md`
+(`{workspace-root}/bazel/main/sdk/docs/bazel-migration/BEADS.md`).
 
 ---
 
@@ -247,8 +250,9 @@ All agents operating on the Bazel thread (`bazel`) MUST strictly adhere to our
 14 Bazel architectural migration rules (covering bottom-up hybrid migration,
 direct header deps, hermetic timestamps, `copy_file` rules, and determinism).
 
-For the full architectural rulebook, refer to: 👉
-**[docs/bazel-migration/GUIDELINES.md](../bazel/main/sdk/docs/bazel-migration/GUIDELINES.md)**.
+For the full architectural rulebook, refer to:
+`../bazel/main/sdk/docs/bazel-migration/GUIDELINES.md`
+(`{workspace-root}/bazel/main/sdk/docs/bazel-migration/GUIDELINES.md`).
 
 ---
 
