@@ -87,29 +87,33 @@ To set up your workspace instantly with proper caching and remote wiring, you
 .agents/scripts/mkagenttree {thread} <task-name> [base-ref]
 ```
 
-_(This automatically verifies `gcertstatus`, fetches the latest target remote
-ref (`upstream-sdk/main` for Core or `origin/main` for Bazel), creates the
-sandbox worktree detached at the requested or default `base-ref`, sets up a
-decoupled `.gclient`, runs `gclient sync -D --no-history`, and empirically
-verifies all build tools before reporting success)._
+_(This automatically verifies active SSO credentials if configured, fetches the
+latest target remote ref (`upstream-sdk/main` for Core or `origin/main` for
+Bazel), creates the sandbox worktree detached at the requested or default
+`base-ref`, sets up a decoupled `.gclient`, runs `gclient sync -D --no-history`,
+and empirically verifies all build tools before reporting success)._
 
 ### Rule 4: Tooling Environment & PATH Invariant
 
-All SDK operations (`gclient`, `gn`, `ninja`, `python3 tools/build.py`,
-`tools/sdks/dart-sdk/bin/dart`) require `depot_tools` in your environment.
-Always ensure:
+All SDK operations (`gclient`, `gn`, `siso`, `autoninja`,
+`python3 tools/build.py`, `tools/sdks/dart-sdk/bin/dart`) require `depot_tools`
+in your environment. Always ensure:
 
 ```bash
 export PATH="$HOME/github/depot_tools:$PATH"
 export DEPOT_TOOLS_UPDATE=0
 ```
 
-- If operating in an environment requiring corporate SSO authentication, ensure
-  credentials (e.g. `gcert`) are active before running build or sync operations.
-- **NEVER manually copy or symlink `buildtools/` or
+- Build SDK targets via `python3 tools/build.py` or `autoninja` (which honor
+  `DART_SISO=1` and `DART_RBE=1`; pass `--no-rbe` on older pre-Siso commits
+  lacking `buildtools/reclient`), never bare `ninja -C` on Siso build
+  directories.
+- If operating in an environment requiring SSO authentication, ensure
+  credentials are active before running build or sync operations.
+- **NEVER manually copy or symlink `buildtools/`, `third_party/siso/`, or
   `build/config/gclient_args.gni` between worktrees**; doing so creates broken
-  GN configurations. If dependencies or build tools are missing, always run our
-  automated self-healing command:
+  GN/Siso configurations. If dependencies or build tools are missing, always run
+  our automated self-healing command:
   ```bash
   .agents/scripts/mkagenttree --sync [path-to-sdk-or-sandbox]
   ```
@@ -166,7 +170,7 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
     - **NEVER copy `out/ReleaseX64/dart2wasm.snapshot` or
       `out/ReleaseX64/dartaotruntime` into
       `~/github/flutter/bin/cache/dart-sdk/`**:
-      - `ninja -C out/ReleaseX64 dart2wasm` embeds
+      - `python3 tools/build.py -m release -a x64 dart2wasm` embeds
         `-Dsdk_hash=<dart-sdk-worktree-hash>` into the snapshot, whereas
         `flutter build web --wasm` loads
         `~/github/flutter/bin/cache/flutter_web_sdk/kernel/dart2wasm_platform.dill`
@@ -267,7 +271,7 @@ hood with `"managed": False` and shared disk caching, refer to: 👉
 
 ## 8. Environment Setup & Skill Verification Protocol
 
-To ensure AI agent harnesses (such as Jetski, Gemini, Claude Code, etc.)
+To ensure AI agent harnesses (such as Gemini CLI, Claude Code, Cursor, etc.)
 correctly discover custom skills defined within repository subdirectories (such
 as `docs/bazel-migration/skills/` on the `bazel` thread), all agents operating
 in `{workspace-root}` MUST follow this verification protocol:
