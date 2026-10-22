@@ -66,6 +66,16 @@ verify_toolchain() {
         echo "❌ Missing gclient generated config: $worktree/build/config/gclient_args.gni"
         missing=1
     fi
+    if [ -f "$worktree/build/config/siso/configure_siso.py" ]; then
+        if [ ! -x "$worktree/third_party/siso/siso" ]; then
+            echo "❌ Missing CIPD Siso binary: $worktree/third_party/siso/siso"
+            missing=1
+        fi
+        if [ ! -f "$worktree/build/config/siso/.sisoenv" ]; then
+            echo "❌ Missing Siso environment config: $worktree/build/config/siso/.sisoenv"
+            missing=1
+        fi
+    fi
 
     if [ "$missing" -ne 0 ]; then
         echo "❌ Verification failed: Toolchain is incomplete."

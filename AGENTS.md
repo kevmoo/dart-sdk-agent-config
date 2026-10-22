@@ -95,21 +95,25 @@ verifies all build tools before reporting success)._
 
 ### Rule 4: Tooling Environment & PATH Invariant
 
-All SDK operations (`gclient`, `gn`, `ninja`, `python3 tools/build.py`,
-`tools/sdks/dart-sdk/bin/dart`) require `depot_tools` in your environment.
-Always ensure:
+All SDK operations (`gclient`, `gn`, `siso`, `autoninja`,
+`python3 tools/build.py`, `tools/sdks/dart-sdk/bin/dart`) require `depot_tools`
+in your environment. Always ensure:
 
 ```bash
 export PATH="$HOME/github/depot_tools:$PATH"
 export DEPOT_TOOLS_UPDATE=0
 ```
 
+- Build SDK targets via `python3 tools/build.py` or `autoninja` (which honor
+  `DART_SISO=1` and `DART_RBE=1`; pass `--no-rbe` on older pre-Siso commits
+  lacking `buildtools/reclient`), never bare `ninja -C` on Siso build
+  directories.
 - If operating in an environment requiring corporate SSO authentication, ensure
   credentials (e.g. `gcert`) are active before running build or sync operations.
-- **NEVER manually copy or symlink `buildtools/` or
+- **NEVER manually copy or symlink `buildtools/`, `third_party/siso/`, or
   `build/config/gclient_args.gni` between worktrees**; doing so creates broken
-  GN configurations. If dependencies or build tools are missing, always run our
-  automated self-healing command:
+  GN/Siso configurations. If dependencies or build tools are missing, always run
+  our automated self-healing command:
   ```bash
   .agents/scripts/mkagenttree --sync [path-to-sdk-or-sandbox]
   ```
@@ -166,7 +170,7 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
     - **NEVER copy `out/ReleaseX64/dart2wasm.snapshot` or
       `out/ReleaseX64/dartaotruntime` into
       `~/github/flutter/bin/cache/dart-sdk/`**:
-      - `ninja -C out/ReleaseX64 dart2wasm` embeds
+      - `python3 tools/build.py -m release -a x64 dart2wasm` embeds
         `-Dsdk_hash=<dart-sdk-worktree-hash>` into the snapshot, whereas
         `flutter build web --wasm` loads
         `~/github/flutter/bin/cache/flutter_web_sdk/kernel/dart2wasm_platform.dill`
