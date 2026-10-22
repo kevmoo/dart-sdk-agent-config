@@ -27,8 +27,8 @@ Perform these steps sequentially when initializing a new task workspace:
      `export PATH="$HOME/github/depot_tools:$PATH"` and
      `export DEPOT_TOOLS_UPDATE=0`.
    - **Authentication / SSO Verification**: If operating in an environment with
-     corporate SSO tooling (e.g. `gcertstatus`), verify credentials are valid
-     (>30m remaining) before running git or gclient operations.
+     SSO tooling, verify credentials are valid (>30m remaining) before running
+     git or gclient operations.
    - **Extract/Prompt Parameters (`ask_question`)**: Extract from user prompt or
      ask: **Work Thread** (`core` or `bazel`) and **Session Intent** (Create
      worktree now vs. just explore).
