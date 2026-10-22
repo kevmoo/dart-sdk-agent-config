@@ -53,7 +53,7 @@ EOF
 # build --config=remote-cache
 # build --remote_cache_async
 # EOF
-# gcloud auth application-default login
+# gcloud auth application-default login --disable-quota-project
 ```
 
 ### Step 4: Verify by Spinning Up Your First Sandbox

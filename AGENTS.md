@@ -108,8 +108,13 @@ export DEPOT_TOOLS_UPDATE=0
   `DART_SISO=1` and `DART_RBE=1`; pass `--no-rbe` on older pre-Siso commits
   lacking `buildtools/reclient`), never bare `ninja -C` on Siso build
   directories.
-- If operating in an environment requiring SSO authentication, ensure
-  credentials are active before running build or sync operations.
+- If operating in an environment requiring SSO or RBE authentication, ensure
+  credentials are active before sync or build operations. For `DART_RBE=1`,
+  authenticate via
+  `gcloud auth application-default login --disable-quota-project` (omitting
+  `"quota_project_id"`, which breaks `flutter-rbe-prod`) and verify with
+  `siso auth-check -project flutter-rbe-prod -reapi_instance default` (using
+  `depot_tools/siso`, which loads `build/config/siso/.sisoenv`).
 - **NEVER manually copy or symlink `buildtools/`, `third_party/siso/`, or
   `build/config/gclient_args.gni` between worktrees**; doing so creates broken
   GN/Siso configurations. If dependencies or build tools are missing, always run
@@ -142,8 +147,9 @@ the dedicated skill: 👉 **`dart-sdk-merge-upstream`**. Always merge
 If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
 
 1.  **`runtime` vs. `create_sdk` (`out/ReleaseX64/dart` vs.
-    `out/ReleaseX64/dart-sdk/bin/dart`):**
-    - Building `runtime` produces `out/ReleaseX64/dart` (`~20s`), **NOT**
+    `out/ReleaseX64/dart-sdk/bin/dart`; `xcodebuild/ReleaseARM64/` on macOS):**
+    - Building `runtime` produces `out/ReleaseX64/dart` (`~20s`, or
+      `xcodebuild/ReleaseARM64/dart` on macOS `arm64`), **NOT**
       `out/ReleaseX64/dart-sdk/bin/dart`.
     - `out/ReleaseX64/dart-sdk/bin/dart` (and `dart analyze` / `dart pub`
       subcommands) only exist if you build `create_sdk`. For fast `dart analyze`
