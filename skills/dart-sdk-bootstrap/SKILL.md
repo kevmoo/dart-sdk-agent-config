@@ -29,7 +29,8 @@ Perform these steps sequentially when initializing a new task workspace:
    - **Authentication / SSO & RBE Verification**: If operating in an
      environment with SSO tooling, verify credentials are valid (>30m
      remaining) before running git or gclient operations. When `DART_RBE=1` is
-     enabled, verify RBE Application Default Credentials via
+     enabled, verify RBE Application Default Credentials from inside an SDK
+     checkout (`{workspace-root}/core/main/sdk` or `{root-worktree}`) via
      `siso auth-check -project flutter-rbe-prod -reapi_instance default` (if
      expired or if `~/.config/gcloud/application_default_credentials.json`
      contains `"quota_project_id"`, refresh via
