@@ -26,9 +26,14 @@ Perform these steps sequentially when initializing a new task workspace:
    - **depot_tools on PATH**: Ensure
      `export PATH="$HOME/github/depot_tools:$PATH"` and
      `export DEPOT_TOOLS_UPDATE=0`.
-   - **Authentication / SSO Verification**: If operating in an environment with
-     SSO tooling, verify credentials are valid (>30m remaining) before running
-     git or gclient operations.
+   - **Authentication / SSO & RBE Verification**: If operating in an
+     environment with SSO tooling, verify credentials are valid (>30m
+     remaining) before running git or gclient operations. When `DART_RBE=1` is
+     enabled, verify RBE Application Default Credentials via
+     `siso auth-check -project flutter-rbe-prod -reapi_instance default` (if
+     expired or if `~/.config/gcloud/application_default_credentials.json`
+     contains `"quota_project_id"`, refresh via
+     `gcloud auth application-default login --disable-quota-project`).
    - **Extract/Prompt Parameters (`ask_question`)**: Extract from user prompt or
      ask: **Work Thread** (`core` or `bazel`) and **Session Intent** (Create
      worktree now vs. just explore).
