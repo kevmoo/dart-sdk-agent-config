@@ -45,6 +45,30 @@ if command -v gcertstatus &>/dev/null; then
     fi
 fi
 
+# Function: Restore remote.origin.pushurl = no_push after gclient sync.
+# When GIT_CACHE_PATH is set, depot_tools gclient_scm.py runs
+# `git remote set-url --push origin <solution.url>` before checking
+# `"managed": False`, overwriting the shared .bare/config push URL to
+# https://github.com/dart-lang/sdk.git.
+defang_origin_pushurl() {
+    local worktree="$1"
+    if git -C "$worktree" remote get-url origin &>/dev/null; then
+        git -C "$worktree" remote set-url --push origin no_push
+    fi
+}
+
+# Function: Run gclient sync in a worktree and always re-defang origin push URL.
+run_gclient_sync() {
+    local worktree="$1"
+    local rc=0
+    (
+        trap 'defang_origin_pushurl "$worktree"' EXIT
+        cd "$worktree" && gclient sync -D --no-history
+    ) || rc=$?
+    defang_origin_pushurl "$worktree"
+    return "$rc"
+}
+
 # Function: Verify toolchain health
 verify_toolchain() {
     local worktree="$1"
@@ -76,6 +100,14 @@ verify_toolchain() {
             missing=1
         fi
     fi
+    if git -C "$worktree" remote get-url origin &>/dev/null; then
+        local origin_pushurl
+        origin_pushurl="$(git -C "$worktree" remote get-url --push origin 2>/dev/null || true)"
+        if [ "$origin_pushurl" != "no_push" ]; then
+            echo "❌ Unsafe origin push URL ('$origin_pushurl'); expected 'no_push'."
+            missing=1
+        fi
+    fi
 
     if [ "$missing" -ne 0 ]; then
         echo "❌ Verification failed: Toolchain is incomplete."
@@ -102,7 +134,7 @@ if [ "${1:-}" = "--sync" ] || [ "${1:-}" = "--repair" ] || [ "${1:-}" = "-s" ]; 
 
     echo "🔄 Re-syncing Dart SDK worktree at: $WORKTREE_DIR"
     echo "🔗 Syncing external dependencies and CIPD packages..."
-    (cd "$WORKTREE_DIR" && gclient sync -D --no-history)
+    run_gclient_sync "$WORKTREE_DIR"
     verify_toolchain "$WORKTREE_DIR"
     echo "✅ Sync complete and toolchain verified!"
     echo "💡 Tip: Ensure depot_tools is on PATH: export PATH=\"\$HOME/github/depot_tools:\$PATH\""
@@ -231,7 +263,7 @@ fi
 
 # 5. Fast Sync Dependencies using shared git cache
 echo "🔗 Syncing external dependencies and CIPD packages..."
-if ! (cd "$WORKTREE_DIR" && gclient sync -D --no-history); then
+if ! run_gclient_sync "$WORKTREE_DIR"; then
     echo "❌ Error: gclient sync failed in $WORKTREE_DIR."
     echo "   Remediation steps:"
     echo "   1. If using corp authentication, ensure your SSO credentials (e.g. gcert) are active."
