@@ -16,18 +16,14 @@ the following terms and variable placeholders are formally defined:
 - **`{workspace-root}`**: The root directory of the repository setup on the
   local machine (typically `~/github/dart-sdk/`, though customizable per
   machine).
-- **`{thread}`**: The specific development stream within the repository:
-  - `core`: Open-source Dart SDK thread (tracks `upstream-sdk/main`).
-  - `bazel`: Internal Bazel migration and integration thread (tracks
-    `origin/main`).
-- **`{root-worktree}`**: The primary persistent main checkout for a thread,
-  located at `{workspace-root}/{thread}/main/sdk`. Used as the baseline
-  reference checkout. (The `core` root is typically a detached checkout at
-  `upstream-sdk/main`, since worktrees are created detached at their tracked
-  ref; the `bazel` root sits on the `main` branch tracking `origin/main`.)
+- **`{thread}`**: The active development stream within the repository (`core`,
+  tracking `upstream-sdk/main`).
+- **`{root-worktree}`**: The primary persistent main checkout, located at
+  `{workspace-root}/core/main/sdk`. Used as the baseline reference checkout
+  tracking `upstream-sdk/main`.
 - **`{sandbox-worktree}`** _(or task worktree)_: Short-lived, isolated worktrees
   created for specific agent tasks at
-  `{workspace-root}/{thread}/agent-{task-name}/sdk`.
+  `{workspace-root}/core/agent-{task-name}/sdk`.
 - **`{bare-repo}`**: The central git database at `{workspace-root}/.bare/`
   housing historical objects for all worktrees.
 
@@ -36,12 +32,12 @@ the following terms and variable placeholders are formally defined:
 All worktrees and the central bare repository MUST configure remotes using the
 following standardized aliases:
 
-| Remote Alias            | Repository URL                                 | Purpose / Scope                                                                     |
-| :---------------------- | :--------------------------------------------- | :---------------------------------------------------------------------------------- |
-| **`upstream-sdk`**      | `https://github.com/dart-lang/sdk.git`         | Canonical open-source Dart SDK upstream repository on GitHub.                       |
-| **`dart-googlesource`** | `https://dart.googlesource.com/sdk.git`        | Canonical GoogleSource internal mirror repository (used for `lkgr-dev` releases).   |
-| **`origin`**            | `https://github.com/kevmoo/dart-sdk-bazel.git` | Primary remote fork for the `bazel` thread and Beads issue sync (`refs/dolt/data`). |
-| **`kevmoo`**            | `https://github.com/kevmoo/sdk.git`            | Personal remote fork for open-source `core` Dart SDK contributions and PRs.         |
+| Remote Alias            | Repository URL                                     | Purpose / Scope                                                                   |
+| :---------------------- | :------------------------------------------------- | :-------------------------------------------------------------------------------- |
+| **`upstream-sdk`**      | `https://github.com/dart-lang/sdk.git`             | Canonical open-source Dart SDK upstream repository on GitHub.                     |
+| **`dart-googlesource`** | `https://dart.googlesource.com/sdk.git`            | Canonical GoogleSource internal mirror repository (used for `lkgr-dev` releases). |
+| **`kevmoo`**            | `https://github.com/kevmoo/sdk.git`                | Personal remote fork for open-source `core` Dart SDK contributions and PRs.       |
+| **`json-next`**         | `https://github.com/kevmoo/dart-sdk-json-next.git` | Dedicated prototype fork for core library JSON and UTF-8 serialization kernels.   |
 
 ---
 
@@ -55,10 +51,8 @@ The workspace root is `{workspace-root}` (typically `~/github/dart-sdk/`).
 - **`{workspace-root}/.agents/`**: Our dedicated, standalone Git repository
   containing agent rules (`AGENTS.md`), automation scripts (`scripts/`), and
   specialized skills (`skills/`).
-- **`{workspace-root}/core/`**: Thread 1 - Core open-source Dart SDK work
+- **`{workspace-root}/core/`**: Core open-source Dart SDK work
   (`{root-worktree}` is `core/main/sdk`).
-- **`{workspace-root}/bazel/`**: Thread 2 - Heavy Bazel fork work
-  (`{root-worktree}` is `bazel/main/sdk`).
 
 ---
 
@@ -71,12 +65,8 @@ You do not have a working tree at the root of `{workspace-root}` or
 
 ### Rule 2: Always create an isolated Sandbox for your task
 
-If you are assigned a task, you must create a dedicated sandbox.
-
-1.  Identify if the task belongs to **Core** (`core`) or **Bazel** (`bazel`)
-    `{thread}`.
-2.  Your sandbox directory should be named
-    `{workspace-root}/{thread}/agent-{task-name}/`.
+If you are assigned a task, you must create a dedicated sandbox under
+`{workspace-root}/core/agent-{task-name}/`.
 
 ### Rule 3: How to initialize your Sandbox (Automated Flow)
 
@@ -84,14 +74,14 @@ To set up your workspace instantly with proper caching and remote wiring, you
 **MUST** use our automated helper script:
 
 ```bash
-.agents/scripts/mkagenttree {thread} <task-name> [base-ref]
+.agents/scripts/mkagenttree core <task-name> [base-ref]
 ```
 
 _(This automatically verifies active SSO credentials if configured, fetches the
-latest target remote ref (`upstream-sdk/main` for Core or `origin/main` for
-Bazel), creates the sandbox worktree detached at the requested or default
-`base-ref`, sets up a decoupled `.gclient`, runs `gclient sync -D --no-history`,
-and empirically verifies all build tools before reporting success)._
+latest target remote ref (`upstream-sdk/main` by default), creates the sandbox
+worktree detached at the requested or default `base-ref`, sets up a decoupled
+`.gclient`, runs `gclient sync -D --no-history`, and empirically verifies all
+build tools before reporting success)._
 
 ### Rule 4: Tooling Environment & PATH Invariant
 
@@ -129,18 +119,12 @@ Once your task is complete, submitted, and approved by the user, you should
 reclaim disk space immediately using our cleanup script:
 
 ```bash
-.agents/scripts/rmagenttree {thread} <task-name>
+.agents/scripts/rmagenttree core <task-name>
 ```
 
 ---
 
 ## 3. Tips for Specific Workflows
-
-### Merging Upstream Core Dart into Bazel Thread
-
-When merging core Dart SDK updates into the Bazel fork (`bazel` thread), invoke
-the dedicated skill: 👉 **`dart-sdk-merge-upstream`**. Always merge
-`upstream-sdk/lkgr-dev` (never raw `main`).
 
 ### Wasm / dart2wasm & VM Build Targets
 
@@ -167,6 +151,7 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
     ```bash
     python3 tools/test.py -n dart2wasm-linux-d8 language/exception/sync_throw_ref_test
     ```
+
     - _Fast IR Golden Tests (`~2s`)_: Run
       `pkg/dart2wasm/test/ir_test.dart --src` using
       `tools/sdks/dart-sdk/bin/dart` to compile directly from `pkg/dart2wasm`
@@ -212,8 +197,7 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
 > ### 🚨 ABSOLUTE RULE FOR ALL AGENTS: NO INFERRED REMOTE WRITES OR FORCE PUSHES
 >
 > 1. **IMMEDIATE EXPLICIT AUTHORIZATION:** Every single `git push` (especially
->    `git push --force` or `git push origin ... --force`) and every single
->    `bd dolt push` (or any remote database write) **MUST** be explicitly
+>    `git push --force` or `git push ... --force`) **MUST** be explicitly
 >    authorized by the human user **immediately before** it is executed.
 > 2. **NO INFERRED PERMISSION:** Permission **CANNOT** be inferred from earlier
 >    statements in the conversation (such as _"let's do that"_ or _"please"_).
@@ -230,43 +214,7 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
 
 ---
 
-## 5. Task Tracking & Backlog Sync (`beads` - Bazel Thread Only)
-
-The **Bazel thread (`bazel`)** uses **beads** (`bd`) for local task tracking and
-Dolt database synchronization.
-
-> [!IMPORTANT]
->
-> **BAZEL THREAD EXCLUSIVE & MANDATORY SKILL**: Beads issue tracking applies
-> **EXCLUSIVELY to Bazel work on the `bazel` thread**. Whenever starting,
-> updating, or completing tasks on the `bazel` thread, all agents **MUST load
-> and adhere to the `sdk-bazel-beads` skill**.
->
-> **BEAD CLOSURE RULE**: Keep tasks in `IN_PROGRESS` status throughout active
-> development, local testing, and PR review. **ONLY run `bd close` after code
-> has landed on `main`** (immediately after a direct push to `main`, or after a
-> PR merges into `main`).
-
-For the complete guide on setup, daily workflows, multi-user `--repo` routing
-guardrails, and Dolt/SSH push troubleshooting, refer to the `sdk-bazel-beads`
-skill and `../bazel/main/sdk/docs/bazel-migration/BEADS.md`
-(`{workspace-root}/bazel/main/sdk/docs/bazel-migration/BEADS.md`).
-
----
-
-## 6. Architectural Migration Guidelines (Bazel Thread Only)
-
-All agents operating on the Bazel thread (`bazel`) MUST strictly adhere to our
-14 Bazel architectural migration rules (covering bottom-up hybrid migration,
-direct header deps, hermetic timestamps, `copy_file` rules, and determinism).
-
-For the full architectural rulebook, refer to:
-`../bazel/main/sdk/docs/bazel-migration/GUIDELINES.md`
-(`{workspace-root}/bazel/main/sdk/docs/bazel-migration/GUIDELINES.md`).
-
----
-
-## 7. Master Workspace Replication & Architecture Guide
+## 5. Master Workspace Replication & Architecture Guide
 
 For instructions on duplicating this Bare-Repository + Sandbox Worktree
 environment on a new machine, or for details on how `gclient` operates under the
@@ -275,22 +223,18 @@ hood with `"managed": False` and shared disk caching, refer to: 👉
 
 ---
 
-## 8. Environment Setup & Skill Verification Protocol
+## 6. Environment Setup & Skill Verification Protocol
 
 To ensure AI agent harnesses (such as Gemini CLI, Claude Code, Cursor, etc.)
-correctly discover custom skills defined within repository subdirectories (such
-as `docs/bazel-migration/skills/` on the `bazel` thread), all agents operating
-in `{workspace-root}` MUST follow this verification protocol:
+correctly discover custom skills defined within `.agents/skills/`, all agents
+operating in `{workspace-root}` MUST follow this verification protocol:
 
 1. **Check Workspace Skills Manifest**: Verify that
    `{workspace-root}/.agents/skills.json` exists and registers the repository
    skills directory:
    ```json
    {
-     "entries": [
-       { "path": ".agents/skills" },
-       { "path": "bazel/main/sdk/docs/bazel-migration/skills" }
-     ]
+     "entries": [{ "path": ".agents/skills" }]
    }
    ```
 2. **Harness Discovery**: Because `{workspace-root}/.agents/` is the workspace
