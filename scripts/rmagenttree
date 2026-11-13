@@ -1,15 +1,25 @@
 #!/usr/bin/env bash
 # Deletes a Dart SDK sandbox worktree and reclaims disk space instantly.
-# Usage: rmagenttree <core|bazel> <task-name>
+# Usage: rmagenttree [core] <task-name>
 set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-    echo "Usage: rmagenttree <core|bazel> <task-name>"
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    echo "Usage: rmagenttree [core] <task-name>"
     exit 1
 fi
 
-CATEGORY="$1"
-TASK_NAME="$2"
+if [ "$#" -eq 2 ]; then
+    if [ "$1" != "core" ]; then
+        echo "❌ Error: Invalid category '$1' (expected 'core')."
+        echo "   Usage: rmagenttree [core] <task-name>"
+        exit 1
+    fi
+    CATEGORY="core"
+    TASK_NAME="$2"
+else
+    CATEGORY="core"
+    TASK_NAME="$1"
+fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="${DART_SDK_WORKSPACE_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"

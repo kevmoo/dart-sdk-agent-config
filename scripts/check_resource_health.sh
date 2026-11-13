@@ -21,7 +21,7 @@ echo ""
 
 echo "🧹 Agent Worktrees Found:"
 FOUND_WORKTREES=0
-for THREAD in core bazel; do
+for THREAD in core; do
     if [ -d "$WORKSPACE_ROOT/$THREAD" ]; then
         for DIR in "$WORKSPACE_ROOT/$THREAD"/agent-*; do
             if [ -d "$DIR" ]; then
@@ -41,7 +41,7 @@ echo ""
 
 if [ "${1:-}" = "--clean-tmp" ]; then
     echo "🧹 Cleaning temporary files in /tmp..."
-    rm -rf /tmp/sar.server.* /tmp/sar.cli_internal.* /tmp/duckie_customization* /tmp/bazel-sandbox.* 2>/dev/null || true
+    rm -rf /tmp/sar.server.* /tmp/sar.cli_internal.* /tmp/duckie_customization* 2>/dev/null || true
     echo "✅ /tmp cleanup complete."
 fi
 

@@ -30,10 +30,8 @@ git init --bare ~/github/dart-sdk/.bare
 # Add primary remotes
 git --git-dir=$HOME/github/dart-sdk/.bare remote add upstream-sdk https://github.com/dart-lang/sdk.git
 git --git-dir=$HOME/github/dart-sdk/.bare remote add dart-googlesource https://dart.googlesource.com/sdk.git
-git --git-dir=$HOME/github/dart-sdk/.bare remote add origin https://github.com/kevmoo/dart-sdk-bazel.git
-git --git-dir=$HOME/github/dart-sdk/.bare remote set-url --push origin no_push
-git --git-dir=$HOME/github/dart-sdk/.bare remote add bazel-fork https://github.com/kevmoo/dart-sdk-bazel.git
 git --git-dir=$HOME/github/dart-sdk/.bare remote add kevmoo https://github.com/kevmoo/sdk.git
+git --git-dir=$HOME/github/dart-sdk/.bare remote add json-next https://github.com/kevmoo/dart-sdk-json-next.git
 
 # Fetch all remote branches and objects (This may take several minutes)
 git --git-dir=$HOME/github/dart-sdk/.bare fetch --all
@@ -43,29 +41,6 @@ git --git-dir=$HOME/github/dart-sdk/.bare fetch --all
 
 ```bash
 git clone git@github.com:kevmoo/dart-sdk-agent-config.git ~/github/dart-sdk/.agents
-```
-
-### Step 3.5: Configure Bazel Disk Caching & Optional Remote Cache
-
-To prevent local disk space from growing unbounded while enabling fast rebuilds,
-configure local garbage-collected disk caching in `~/.bazelrc`:
-
-```bash
-# Append machine-global Bazel disk cache flags
-cat >> ~/.bazelrc <<EOF
-# A local disk cache must be set for the GC size/age limits below to apply.
-build --disk_cache=~/.cache/bazel-disk-cache
-build --experimental_disk_cache_gc_max_size=50G
-build --experimental_disk_cache_gc_max_age=14d
-build --experimental_repository_cache_hardlinks
-EOF
-
-# (Optional / Team Specific): If collaborating with the shared team GCS remote cache:
-# cat >> ~/.bazelrc <<EOF
-# build --config=remote-cache
-# build --remote_cache_async
-# EOF
-# gcloud auth application-default login --disable-quota-project
 ```
 
 ### Step 4: Verify by Spinning Up Your First Sandbox
@@ -102,9 +77,9 @@ management mechanism to bridge `git worktree` and `gclient`:
     to just a few seconds.
 5.  **Deterministic Base Ref & Dependency Pruning:** Before syncing a new
     sandbox, `mkagenttree` fetches the target remote ref in `.bare`, checks out
-    the requested or default `base-ref` (`upstream-sdk/main` for `core`,
-    `origin/main` for `bazel`) in detached `HEAD` mode, runs
-    `gclient sync -D --no-history` inside the new sandbox to prune removed
-    dependencies and hydrate CIPD toolchains, and restores
-    `remote.origin.pushurl = no_push` (which `depot_tools` git-cache mirrors
-    otherwise overwrite to the `.gclient` solution URL).
+    the requested or default `base-ref` (`upstream-sdk/main` for `core`) in
+    detached `HEAD` mode, runs `gclient sync -D --no-history` inside the new
+    sandbox to prune removed dependencies and hydrate CIPD toolchains, and
+    restores `remote.origin.pushurl = no_push` if an `origin` remote is present
+    (which `depot_tools` git-cache mirrors otherwise overwrite to the `.gclient`
+    solution URL).

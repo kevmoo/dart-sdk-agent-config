@@ -1,6 +1,3 @@
 {
-  "entries": [
-    { "path": ".agents/skills" },
-    { "path": "bazel/main/sdk/docs/bazel-migration/skills" }
-  ]
+  "entries": [{ "path": ".agents/skills" }]
 }
