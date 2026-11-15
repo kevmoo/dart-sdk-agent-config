@@ -17,10 +17,10 @@ the following terms and variable placeholders are formally defined:
   local machine (typically `~/github/dart-sdk/`, though customizable per
   machine).
 - **`{thread}`**: The active development stream within the repository (`core`,
-  tracking `upstream-sdk/main`).
+  tracking `origin/main`).
 - **`{root-worktree}`**: The primary persistent main checkout, located at
   `{workspace-root}/core/main/sdk`. Used as the baseline reference checkout
-  tracking `upstream-sdk/main`.
+  tracking `origin/main`.
 - **`{sandbox-worktree}`** _(or task worktree)_: Short-lived, isolated worktrees
   created for specific agent tasks at
   `{workspace-root}/core/agent-{task-name}/sdk`.
@@ -32,12 +32,12 @@ the following terms and variable placeholders are formally defined:
 All worktrees and the central bare repository MUST configure remotes using the
 following standardized aliases:
 
-| Remote Alias            | Repository URL                                     | Purpose / Scope                                                                   |
-| :---------------------- | :------------------------------------------------- | :-------------------------------------------------------------------------------- |
-| **`upstream-sdk`**      | `https://github.com/dart-lang/sdk.git`             | Canonical open-source Dart SDK upstream repository on GitHub.                     |
-| **`dart-googlesource`** | `https://dart.googlesource.com/sdk.git`            | Canonical GoogleSource internal mirror repository (used for `lkgr-dev` releases). |
-| **`kevmoo`**            | `https://github.com/kevmoo/sdk.git`                | Personal remote fork for open-source `core` Dart SDK contributions and PRs.       |
-| **`json-next`**         | `https://github.com/kevmoo/dart-sdk-json-next.git` | Dedicated prototype fork for core library JSON and UTF-8 serialization kernels.   |
+| Remote Alias            | Repository URL                                     | Purpose / Scope                                                                     |
+| :---------------------- | :------------------------------------------------- | :---------------------------------------------------------------------------------- |
+| **`origin`**            | `https://github.com/dart-lang/sdk.git`             | Canonical open-source Dart SDK upstream repository on GitHub (`pushurl = no_push`). |
+| **`dart-googlesource`** | `https://dart.googlesource.com/sdk.git`            | Canonical GoogleSource internal mirror repository (used for `lkgr-dev` releases).   |
+| **`kevmoo`**            | `https://github.com/kevmoo/sdk.git`                | Personal remote fork for open-source `core` Dart SDK contributions and PRs.         |
+| **`json-next`**         | `https://github.com/kevmoo/dart-sdk-json-next.git` | Dedicated prototype fork for core library JSON and UTF-8 serialization kernels.     |
 
 ---
 
@@ -78,7 +78,7 @@ To set up your workspace instantly with proper caching and remote wiring, you
 ```
 
 _(This automatically verifies active SSO credentials if configured, fetches the
-latest target remote ref (`upstream-sdk/main` by default), creates the sandbox
+latest target remote ref (`origin/main` by default), creates the sandbox
 worktree detached at the requested or default `base-ref`, sets up a decoupled
 `.gclient`, runs `gclient sync -D --no-history`, and empirically verifies all
 build tools before reporting success)._
@@ -148,6 +148,7 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
     ```
 3.  **Running Tests:** Use `tools/test.py` with the `dart2wasm-linux-d8` or
     `dart2wasm-linux-chrome` configurations:
+
     ```bash
     python3 tools/test.py -n dart2wasm-linux-d8 language/exception/sync_throw_ref_test
     ```
@@ -156,6 +157,7 @@ If your task involves WebAssembly, `dart2wasm`, or building local SDK binaries:
       `pkg/dart2wasm/test/ir_test.dart --src` using
       `tools/sdks/dart-sdk/bin/dart` to compile directly from `pkg/dart2wasm`
       source without rebuilding snapshots.
+
 4.  **Testing Local `pkg/dart2wasm` Changes End-to-End in Flutter (`15s` AOT
     Snapshot Fast Path):**
     - **NEVER copy `out/ReleaseX64/dart2wasm.snapshot` or
