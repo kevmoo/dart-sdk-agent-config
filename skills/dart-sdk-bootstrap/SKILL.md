@@ -41,7 +41,7 @@ Perform these steps sequentially when initializing a new task workspace:
    - **Fetch Remotes**: `git --git-dir={bare-repo} fetch --all`
    - **Verify Cleanliness**: Run `git status` in `{root-worktree}`. If dirty,
      warn the user and use `ask_question` to resolve.
-   - **Check Sync**: Compare `HEAD` to `upstream-sdk/main`. If out of date,
+   - **Check Sync**: Compare `HEAD` to `origin/main`. If out of date,
      prompt the user (`ask_question`) to sync/pull.
 
 3. **Initialize Sandbox** (if creating worktree):

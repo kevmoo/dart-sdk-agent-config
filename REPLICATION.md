@@ -28,7 +28,8 @@ mkdir -p ~/github/dart-sdk/.bare
 git init --bare ~/github/dart-sdk/.bare
 
 # Add primary remotes
-git --git-dir=$HOME/github/dart-sdk/.bare remote add upstream-sdk https://github.com/dart-lang/sdk.git
+git --git-dir=$HOME/github/dart-sdk/.bare remote add origin https://github.com/dart-lang/sdk.git
+git --git-dir=$HOME/github/dart-sdk/.bare remote set-url --push origin no_push
 git --git-dir=$HOME/github/dart-sdk/.bare remote add dart-googlesource https://dart.googlesource.com/sdk.git
 git --git-dir=$HOME/github/dart-sdk/.bare remote add kevmoo https://github.com/kevmoo/sdk.git
 git --git-dir=$HOME/github/dart-sdk/.bare remote add json-next https://github.com/kevmoo/dart-sdk-json-next.git
@@ -77,7 +78,7 @@ management mechanism to bridge `git worktree` and `gclient`:
     to just a few seconds.
 5.  **Deterministic Base Ref & Dependency Pruning:** Before syncing a new
     sandbox, `mkagenttree` fetches the target remote ref in `.bare`, checks out
-    the requested or default `base-ref` (`upstream-sdk/main` for `core`) in
+    the requested or default `base-ref` (`origin/main` for `core`) in
     detached `HEAD` mode, runs `gclient sync -D --no-history` inside the new
     sandbox to prune removed dependencies and hydrate CIPD toolchains, and
     restores `remote.origin.pushurl = no_push` if an `origin` remote is present
